@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Box, Sphere, Cylinder, Text, Float, Environment, Lightformer } from '@react-three/drei';
+import { Box, Sphere, Cylinder, Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
-import { TableItem, Experiment, fillPercent } from '../types';
-import { remoteControl } from '../remote/RemoteBridge';
+import { TableItem, Experiment } from '../types';
 
 interface LabRoomProps {
   labMode: 'guided' | 'sandbox';
@@ -109,58 +108,9 @@ function WASDPlayerControls() {
 
     camera.position.x = Math.max(-5.0, Math.min(5.0, camera.position.x));
     camera.position.z = Math.max(0.6, Math.min(7.0, camera.position.z));
-
-    // Phone controller look: absolute gyro tilt takes precedence over drag deltas.
-    if (remoteControl.tilt) {
-      euler.current.y = remoteControl.tilt.yaw;
-      euler.current.x = Math.max(-Math.PI / 2.8, Math.min(Math.PI / 2.8, remoteControl.tilt.pitch));
-      euler.current.z = 0;
-      camera.quaternion.setFromEuler(euler.current);
-    } else if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
-      const sensitivity = 0.0035;
-      euler.current.y -= remoteControl.lookDx * sensitivity;
-      euler.current.x -= remoteControl.lookDy * sensitivity;
-      euler.current.x = Math.max(-Math.PI / 2.8, Math.min(Math.PI / 2.8, euler.current.x));
-      camera.quaternion.setFromEuler(euler.current);
-      remoteControl.lookDx = 0;
-      remoteControl.lookDy = 0;
-    }
   });
 
   return null;
-}
-
-// Shared radial-gradient texture for cheap soft contact shadows (no shadow maps = fast).
-const blobShadowTexture = (() => {
-  if (typeof document === 'undefined') return undefined;
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return undefined;
-  const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
-  g.addColorStop(0, 'rgba(0,0,0,0.55)');
-  g.addColorStop(0.55, 'rgba(0,0,0,0.28)');
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 128, 128);
-  return new THREE.CanvasTexture(canvas);
-})();
-
-function BlobShadow({
-  position,
-  size = 0.8,
-  opacity = 0.34,
-}: {
-  position: [number, number, number];
-  size?: number;
-  opacity?: number;
-}) {
-  return (
-    <mesh position={position} rotation-x={-Math.PI / 2}>
-      <planeGeometry args={[size, size]} />
-      <meshBasicMaterial map={blobShadowTexture} transparent opacity={opacity} depthWrite={false} />
-    </mesh>
-  );
 }
 
 // 3D BLACKBOARD MOUNTED ON LAB WALL WITH CHALK STEPS & AIM
@@ -272,10 +222,6 @@ export function LabRoom({
 }: LabRoomProps) {
   return (
     <group>
-      {/* Light room palette + distance fading for depth */}
-      <color attach="background" args={['#eef2f6']} />
-      <fog attach="fog" args={['#eef2f6', 9, 27]} />
-
       {/* WASD Walking Navigation */}
       <WASDPlayerControls />
 
@@ -391,6 +337,40 @@ export function LabRoom({
             25.040 g
           </Text>
         </group>
+      </group>
+
+      {/* BACK-LEFT CHALKBOARD EASEL */}
+      <group position={[-2.4, -0.5, -2.5]} rotation={[0, Math.PI / 8, 0]}>
+        <Cylinder args={[0.025, 0.025, 2.2, 16]} position={[-0.7, 1.1, -0.15]} rotation={[0.15, 0, -0.1]} castShadow>
+          <meshStandardMaterial color="#78350f" roughness={0.7} />
+        </Cylinder>
+        <Cylinder args={[0.025, 0.025, 2.2, 16]} position={[0.7, 1.1, -0.15]} rotation={[0.15, 0, 0.1]} castShadow>
+          <meshStandardMaterial color="#78350f" roughness={0.7} />
+        </Cylinder>
+        <Cylinder args={[0.025, 0.025, 2.1, 16]} position={[0, 1.1, -0.5]} rotation={[-0.3, 0, 0]}>
+          <meshStandardMaterial color="#78350f" roughness={0.7} />
+        </Cylinder>
+
+        <Box args={[2.8, 1.8, 0.06]} position={[0, 1.4, 0]} castShadow>
+          <meshStandardMaterial color="#92400e" roughness={0.6} />
+        </Box>
+        <mesh position={[0, 1.4, 0.035]}>
+          <planeGeometry args={[2.6, 1.6]} />
+          <meshStandardMaterial color="#0c281e" roughness={0.9} />
+        </mesh>
+
+        <Text position={[0, 2.0, 0.04]} fontSize={0.16} color="#ffffff" anchorX="center">
+          Quiz Time
+        </Text>
+        <Text position={[-1.1, 1.75, 0.04]} fontSize={0.09} color="#fef08a" anchorX="left">
+          Instructions:
+        </Text>
+        <Text position={[-1.1, 1.48, 0.04]} fontSize={0.07} color="#f8fafc" anchorX="left" maxWidth={2.2}>
+          Mix chemicals to observe reactions! Use 1, 2, 3 for racks.
+        </Text>
+        <Text position={[-1.1, 1.1, 0.04]} fontSize={0.07} color="#38bdf8" anchorX="left" maxWidth={2.2}>
+          Select item & press [P] to pour/mix into target container.
+        </Text>
       </group>
 
       {/* RIGHT CORNER 3: SIDE COUNTER WITH SPECTROPHOTOMETER, MICROSCOPE & LAB ROBOT */}
@@ -552,7 +532,7 @@ export function LabRoom({
 
       {/* THREE SIDE WALL RACKS FOR EXTRA CATALOG SELECTION */}
       <WallRack
-        position={[-10.5, 1.2, -1]}
+        position={[-10.5, 0, -1]}
         rotation={[0, Math.PI / 2, 0]}
         title="GLASSWARE SHELF"
         keyHint="[1]"
@@ -561,7 +541,7 @@ export function LabRoom({
         onOpenRackMenu={onOpenRackMenu}
       />
       <WallRack
-        position={[10.5, 1.2, -1]}
+        position={[10.5, 0, -1]}
         rotation={[0, -Math.PI / 2, 0]}
         title="CHEMICAL SHELF"
         keyHint="[2]"
@@ -582,20 +562,9 @@ export function LabRoom({
       />
 
       {/* Photorealistic Lighting Setup */}
-      <ambientLight intensity={0.55} color="#ffffff" />
-      <hemisphereLight args={['#f8fafc', '#94a3b8', 0.5]} />
-      <directionalLight position={[5, 12, 6]} intensity={1.5} />
-      {/* Warm pendant light over the central workbench so glass pops */}
-      <pointLight position={[0, 3.0, 0.25]} intensity={1.2} color="#fff7ed" distance={7} />
-      <pointLight position={[0, 4, 0]} intensity={0.5} color="#f8fafc" distance={9} />
-
-      {/* Offline environment map (PMREM) for subtle steel/glass reflections */}
-      <Environment resolution={64} frames={1}>
-        <Lightformer intensity={1.2} color="#e0f2fe" position={[0, 5, -9]} scale={[7, 3, 1]} />
-        <Lightformer intensity={0.7} color="#bae6fd" position={[-6, 3, -2]} rotation={[0, Math.PI / 2, 0]} scale={[4, 2, 1]} />
-        <Lightformer intensity={0.7} color="#fde68a" position={[6, 3, 3]} rotation={[0, -Math.PI / 2, 0]} scale={[4, 2, 1]} />
-        <Lightformer intensity={0.3} color="#cffafe" position={[0, 8, 0]} rotation-x={Math.PI / 2} scale={[3, 10, 1]} />
-      </Environment>
+      <ambientLight intensity={0.95} />
+      <directionalLight position={[5, 10, 5]} intensity={1.6} castShadow />
+      <pointLight position={[0, 4, 0]} intensity={2.2} color="#f8fafc" distance={9} />
     </group>
   );
 }
@@ -741,75 +710,36 @@ function MainWorkbenchTable({
           rotZ = -1.1 * Math.sin(p * Math.PI);
         }
 
-        const heatActive = isHeating && isSelected;
-
         return (
-          <group key={item.instanceId}>
-            {/* Cheap soft contact shadow on the desk surface */}
-            <BlobShadow
-              position={[item.position[0], 1.0105, item.position[2] + 0.35]}
-              size={item.type === 'test-tube' ? 0.55 : 0.85}
-              opacity={item.category === 'glassware' ? 0.3 : 0.38}
-            />
+          <group key={item.instanceId} position={[xPos, yPos, zPos]} rotation-z={rotZ}>
+            {isSelected && (
+              <Cylinder args={[0.32, 0.32, 0.01, 32]} position={[0, -0.01, 0]}>
+                <meshBasicMaterial color="#38bdf8" transparent opacity={0.6} />
+              </Cylinder>
+            )}
 
-            <group position={[xPos, yPos, zPos]} rotation-z={rotZ}>
-              {isSelected && (
-                <Cylinder args={[0.32, 0.32, 0.01, 32]} position={[0, -0.01, 0]}>
-                  <meshBasicMaterial color="#38bdf8" transparent opacity={0.6} />
-                </Cylinder>
+            <group onClick={() => onSelectTableItem(isSelected ? null : item.instanceId)}>
+              {item.catalogId === 'flask' ? (
+                <RenderFlask
+                  item={item}
+                  isHeating={isHeating && isSelected}
+                  isBubbling={isTargetPouring || (isHeating && isSelected)}
+                />
+              ) : item.catalogId === 'test-tube' ? (
+                <RenderTestTube
+                  item={item}
+                  isHeating={isHeating && isSelected}
+                  isBubbling={isTargetPouring || (isHeating && isSelected)}
+                />
+              ) : item.catalogId === 'burner' ? (
+                <RenderBunsenBurner isHeating={isHeating} />
+              ) : (
+                <RenderBeaker
+                  item={item}
+                  isHeating={isHeating && isSelected}
+                  isBubbling={isTargetPouring || (isHeating && isSelected)}
+                />
               )}
-
-              <group onClick={() => onSelectTableItem(isSelected ? null : item.instanceId)}>
-                {item.catalogId === 'flask' ? (
-                  <RenderFlask
-                    item={item}
-                    isHeating={heatActive}
-                    isBubbling={isTargetPouring || heatActive}
-                    temperature={item.contents?.temperature ?? 22}
-                  />
-                ) : item.catalogId === 'test-tube' ? (
-                  <RenderTestTube
-                    item={item}
-                    isHeating={heatActive}
-                    isBubbling={isTargetPouring || heatActive}
-                    temperature={item.contents?.temperature ?? 22}
-                  />
-                ) : item.catalogId === 'burette' ? (
-                  <RenderBurette
-                    item={item}
-                    isHeating={heatActive}
-                    isBubbling={isTargetPouring || heatActive}
-                    temperature={item.contents?.temperature ?? 22}
-                  />
-                ) : item.catalogId === 'cylinder' ? (
-                  <RenderCylinder
-                    item={item}
-                    isHeating={heatActive}
-                    isBubbling={isTargetPouring || heatActive}
-                    temperature={item.contents?.temperature ?? 22}
-                  />
-                ) : item.catalogId === 'dropper' ? (
-                  <RenderDropper
-                    item={item}
-                    isHeating={heatActive}
-                    isBubbling={isTargetPouring || heatActive}
-                    temperature={item.contents?.temperature ?? 22}
-                  />
-                ) : item.catalogId === 'thermometer' ? (
-                  <RenderThermometer item={item} />
-                ) : item.catalogId === 'tripod' ? (
-                  <RenderTripod />
-                ) : item.catalogId === 'burner' ? (
-                  <RenderBunsenBurner isHeating={isHeating} />
-                ) : (
-                  <RenderBeaker
-                    item={item}
-                    isHeating={heatActive}
-                    isBubbling={isTargetPouring || heatActive}
-                    temperature={item.contents?.temperature ?? 22}
-                  />
-                )}
-              </group>
             </group>
           </group>
         );
@@ -900,16 +830,12 @@ function ShelfReagentBottle({
       <Cylinder args={[0.08, 0.08, 0.12, 32]} position={[0, 0.48, 0]}>
         <meshStandardMaterial color="#0f172a" roughness={0.3} />
       </Cylinder>
-      <group position={[0, 0.22, 0.165]}>
+      <group position={[0, 0.22, 0.162]}>
         <mesh>
-          <planeGeometry args={[0.2, 0.125]} />
-          <meshStandardMaterial color="#0f172a" />
-        </mesh>
-        <mesh>
-          <planeGeometry args={[0.18, 0.105]} />
+          <planeGeometry args={[0.24, 0.16]} />
           <meshStandardMaterial color="#ffffff" />
         </mesh>
-        <Text position={[0, 0, 0.011]} fontSize={0.064} color="#000000" anchorX="center" fontWeight="bold">
+        <Text position={[0, 0, 0.01]} fontSize={0.05} color="#000000" anchorX="center">
           {name}
         </Text>
       </group>
@@ -939,10 +865,10 @@ function DropperBottle({
       </Cylinder>
       <group position={[0, 0.52, 0]}>
         <mesh>
-          <boxGeometry args={[0.4, 0.1, 0.02]} />
+          <boxGeometry args={[0.38, 0.09, 0.02]} />
           <meshStandardMaterial color="#0284c7" />
         </mesh>
-        <Text position={[0, 0, 0.025]} fontSize={0.058} color="#ffffff" anchorX="center" anchorY="middle" fontWeight="bold">
+        <Text position={[0, 0, 0.02]} fontSize={0.045} color="#ffffff" anchorX="center">
           {name}
         </Text>
       </group>
@@ -1245,98 +1171,31 @@ function SmokeFumesSystem({
   );
 }
 
-// GELATINOUS PRECIPITATE SEDIMENT that settles at the bottom of a reacting liquid
-function PrecipitateLayer({
-  color = '#bfdbfe',
-  radius = 0.17,
-  y = 0.02,
-  height = 0.05,
-}: {
-  color?: string;
-  radius?: number;
-  y?: number;
-  height?: number;
-}) {
-  return (
-    <group>
-      <Cylinder args={[radius, radius * 1.08, height, 24]} position={[0, y, 0]}>
-        <meshStandardMaterial color={color} roughness={0.9} transparent opacity={0.85} />
-      </Cylinder>
-      <Cylinder args={[radius * 0.55, radius * 0.68, height * 0.45, 20]} position={[0, y + height * 0.28, 0]}>
-        <meshStandardMaterial color={color} roughness={0.95} transparent opacity={0.45} />
-      </Cylinder>
-    </group>
-  );
-}
-
-// SUBTLE LIQUID MENISCUS — gently curved surface of a real liquid in glassware
-function LiquidMeniscus({ color, radius, y }: { color: string; radius: number; y: number }) {
-  return (
-    <Sphere args={[radius, 24, 12]} position={[0, y, 0]} scale={[1, 0.09, 1]}>
-      <meshStandardMaterial color={color} roughness={0.05} transparent opacity={0.9} />
-    </Sphere>
-  );
-}
-
 // REALISTIC PROPORTIONATED GLASSWARE RENDER FUNCTIONS
 function RenderBeaker({
   item,
   isHeating,
   isBubbling,
-  temperature = 22,
 }: {
   item: TableItem;
   isHeating: boolean;
   isBubbling?: boolean;
-  temperature?: number;
 }) {
   const liquidColor = item.contents?.color || '#38bdf8';
-  const hasLiquid = (item.contents?.chemicals?.length ?? 0) > 0;
-  const isReacting = isHeating || isBubbling || temperature >= 100 || Boolean(item.contents?.gasEvolved);
-  const fill = hasLiquid ? fillPercent(item) : 0;
-
-  // Liquid column scales with the volume inside (max fill = 0.30 tall).
-  const liqMax = 0.30;
-  const liqBottom = 0.03;
-  const liqHeight = hasLiquid ? Math.max(0.02, liqMax * Math.min(1, fill)) : 0;
-  const liqCenter = liqBottom + liqHeight / 2;
-  const liqTop = liqBottom + liqHeight;
+  const hasLiquid = true;
+  const isReacting = isHeating || isBubbling || Boolean(item.contents?.gasEvolved);
 
   return (
     <group>
-      {/* Outer Clear Glass Beaker Body */}
+      {/* Outer Clear Glass Beaker Body (Scaled down to realistic lab size) */}
       <Cylinder args={[0.22, 0.20, 0.46, 32]} position={[0, 0.23, 0]}>
-        <meshPhysicalMaterial
-          color="#ffffff"
-          roughness={0.05}
-          clearcoat={0.7}
-          clearcoatRoughness={0.12}
-          transparent
-          opacity={0.45}
-        />
+        <meshStandardMaterial color="#ffffff" roughness={0.05} transparent opacity={0.55} />
       </Cylinder>
 
       {/* Top Glass Lip Rim */}
       <Cylinder args={[0.24, 0.22, 0.03, 32]} position={[0, 0.46, 0]}>
-        <meshPhysicalMaterial
-          color="#ffffff"
-          roughness={0.05}
-          clearcoat={0.7}
-          clearcoatRoughness={0.1}
-          transparent
-          opacity={0.75}
-        />
+        <meshStandardMaterial color="#ffffff" roughness={0.05} transparent opacity={0.8} />
       </Cylinder>
-
-      {/* Pouring Spout on the rim */}
-      <Cylinder args={[0.05, 0.035, 0.07, 16]} position={[0.155, 0.455, 0]} rotation-z={-0.5}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.6} />
-      </Cylinder>
-
-      {/* Vertical glass highlight (specular streak) */}
-      <Box args={[0.035, 0.4, 0.006]} position={[-0.1, 0.22, 0.2]}>
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.18} />
-      </Box>
 
       {/* Graduation Markings on Front Glass Face */}
       {[-0.12, -0.04, 0.04, 0.12].map((y, idx) => (
@@ -1349,30 +1208,18 @@ function RenderBeaker({
 
       {/* Labeled Chemical Paper Badge on Front Glass Face */}
       <group position={[0, 0.28, 0.215]}>
-        <Box args={[0.28, 0.15, 0.012]}>
-          <meshStandardMaterial color="#0f172a" roughness={0.3} />
-        </Box>
-        <Box args={[0.26, 0.13, 0.013]}>
+        <Box args={[0.22, 0.10, 0.01]}>
           <meshStandardMaterial color="#ffffff" roughness={0.2} />
         </Box>
-        <Text
-          position={[0, 0, 0.015]}
-          fontSize={0.045}
-          color="#0f172a"
-          anchorX="center"
-          anchorY="middle"
-          fontWeight="bold"
-          maxWidth={0.24}
-          textAlign="center"
-        >
+        <Text position={[0, 0, 0.01]} fontSize={0.042} color="#0f172a" anchorX="center">
           {item.name.replace(' Beaker', '')}
         </Text>
       </group>
 
       {/* Realistic Liquid Volume inside Beaker */}
-      {hasLiquid && liqHeight > 0 && (
-        <group>
-          <Cylinder args={[0.19, 0.18, liqHeight, 32]} position={[0, liqCenter, 0]}>
+      {hasLiquid && (
+        <group position={[0, 0.16, 0]}>
+          <Cylinder args={[0.19, 0.18, 0.30, 32]}>
             <meshStandardMaterial
               color={liquidColor}
               emissive={liquidColor}
@@ -1382,18 +1229,12 @@ function RenderBeaker({
               opacity={0.92}
             />
           </Cylinder>
-          <Cylinder args={[0.19, 0.19, 0.01, 32]} position={[0, liqTop, 0]}>
+          <Cylinder args={[0.19, 0.19, 0.01, 32]} position={[0, 0.15, 0]}>
             <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
           </Cylinder>
 
-          {/* Curved liquid meniscus surface */}
-          <LiquidMeniscus color={liquidColor} radius={0.19} y={liqTop - 0.002} />
-
-          {/* Precipitate sediment settled at the bottom */}
-          {item.contents?.precipitate && <PrecipitateLayer color="#bfdbfe" radius={0.16} y={0.045} height={0.05} />}
-
-          {/* 3D Fizzing Bubbles inside liquid during reaction/heating */}
-          <FizzingBubblesSystem color={liquidColor} active={isReacting} height={Math.max(0.05, liqHeight * 0.85)} radius={0.16} />
+          {/* 3D Fizzing Bubbles inside liquid during reaction/heating/pouring */}
+          <FizzingBubblesSystem color={liquidColor} active={isReacting} height={0.28} radius={0.16} />
         </group>
       )}
 
@@ -1407,40 +1248,31 @@ function RenderFlask({
   item,
   isHeating,
   isBubbling,
-  temperature = 22,
 }: {
   item: TableItem;
   isHeating: boolean;
   isBubbling?: boolean;
-  temperature?: number;
 }) {
   const liquidColor = item.contents?.color || '#38bdf8';
-  const hasLiquid = (item.contents?.chemicals?.length ?? 0) > 0;
-  const isReacting = isHeating || isBubbling || temperature >= 100 || Boolean(item.contents?.gasEvolved);
-  const fill = hasLiquid ? fillPercent(item) : 0;
-  const liqRadius = 0.22 * (0.45 + 0.55 * Math.min(1, fill));
+  const hasLiquid = true;
+  const isReacting = isHeating || isBubbling || Boolean(item.contents?.gasEvolved);
 
   return (
     <group>
       {/* Erlenmeyer Flask Neck */}
       <Cylinder args={[0.07, 0.07, 0.32, 32]} position={[0, 0.36, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.55} />
-      </Cylinder>
-
-      {/* Flask Neck Rim */}
-      <Cylinder args={[0.078, 0.078, 0.025, 32]} position={[0, 0.525, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.8} />
+        <meshStandardMaterial color="#ffffff" roughness={0.05} transparent opacity={0.6} />
       </Cylinder>
 
       {/* Flask Body Sphere/Cone */}
       <Sphere args={[0.25, 32, 32]} position={[0, 0.14, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.55} />
+        <meshStandardMaterial color="#ffffff" roughness={0.05} transparent opacity={0.6} />
       </Sphere>
 
-      {/* Liquid Mesh inside Flask (scales with volume) */}
-      {hasLiquid && liqRadius > 0.02 && (
+      {/* Liquid Mesh inside Flask */}
+      {hasLiquid && (
         <group position={[0, 0.12, 0]}>
-          <Sphere args={[liqRadius, 32, 32]}>
+          <Sphere args={[0.22, 32, 32]}>
             <meshStandardMaterial
               color={liquidColor}
               emissive={liquidColor}
@@ -1450,8 +1282,7 @@ function RenderFlask({
               opacity={0.92}
             />
           </Sphere>
-          {item.contents?.precipitate && <PrecipitateLayer color="#bfdbfe" radius={liqRadius * 0.8} y={-0.1} height={0.08} />}
-          <FizzingBubblesSystem color={liquidColor} active={isReacting} height={liqRadius * 1.15} radius={liqRadius * 0.8} />
+          <FizzingBubblesSystem color={liquidColor} active={isReacting} height={0.22} radius={0.18} />
         </group>
       )}
 
@@ -1465,23 +1296,14 @@ function RenderTestTube({
   item,
   isHeating,
   isBubbling,
-  temperature = 22,
 }: {
   item: TableItem;
   isHeating: boolean;
   isBubbling?: boolean;
-  temperature?: number;
 }) {
   const liquidColor = item.contents?.color || '#38bdf8';
-  const hasLiquid = (item.contents?.chemicals?.length ?? 0) > 0;
-  const isReacting = isHeating || isBubbling || temperature >= 100 || Boolean(item.contents?.gasEvolved);
-  const fill = hasLiquid ? fillPercent(item) : 0;
-
-  const liqMax = 0.24;
-  const liqBottom = 0.08;
-  const liqHeight = hasLiquid ? Math.max(0.02, liqMax * Math.min(1, fill)) : 0;
-  const liqCenter = liqBottom + liqHeight / 2;
-  const liqTop = liqBottom + liqHeight;
+  const hasLiquid = true;
+  const isReacting = isHeating || isBubbling || Boolean(item.contents?.gasEvolved);
 
   return (
     <group>
@@ -1498,17 +1320,12 @@ function RenderTestTube({
 
       {/* Test Tube Glass */}
       <Cylinder args={[0.055, 0.055, 0.42, 32]} position={[0, 0.25, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.6} />
+        <meshStandardMaterial color="#ffffff" roughness={0.05} transparent opacity={0.65} />
       </Cylinder>
 
-      {/* Rolled glass rim at the tube mouth */}
-      <Cylinder args={[0.06, 0.06, 0.02, 24]} position={[0, 0.465, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.85} />
-      </Cylinder>
-
-      {hasLiquid && liqHeight > 0 && (
-        <group>
-          <Cylinder args={[0.048, 0.048, liqHeight, 32]} position={[0, liqCenter, 0]}>
+      {hasLiquid && (
+        <group position={[0, 0.18, 0]}>
+          <Cylinder args={[0.048, 0.048, 0.25, 32]}>
             <meshStandardMaterial
               color={liquidColor}
               emissive={liquidColor}
@@ -1517,15 +1334,11 @@ function RenderTestTube({
               opacity={0.92}
             />
           </Cylinder>
-          <Cylinder args={[0.048, 0.048, 0.01, 32]} position={[0, liqTop, 0]}>
+          <Cylinder args={[0.048, 0.048, 0.01, 32]} position={[0, 0.125, 0]}>
             <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
           </Cylinder>
 
-          <LiquidMeniscus color={liquidColor} radius={0.048} y={liqTop - 0.002} />
-
-          {item.contents?.precipitate && <PrecipitateLayer color="#bfdbfe" radius={0.04} y={liqBottom + 0.015} height={0.04} />}
-
-          <FizzingBubblesSystem color={liquidColor} active={isReacting} height={Math.max(0.04, liqHeight * 0.85)} radius={0.04} />
+          <FizzingBubblesSystem color={liquidColor} active={isReacting} height={0.22} radius={0.04} />
         </group>
       )}
 
@@ -1545,28 +1358,9 @@ function RenderChemicalBottle({ item }: { item: TableItem }) {
       <Cylinder args={[0.06, 0.06, 0.10, 32]} position={[0, 0.38, 0]}>
         <meshStandardMaterial color="#0f172a" />
       </Cylinder>
-      <group position={[0, 0.18, 0.143]}>
-        <mesh>
-          <planeGeometry args={[0.26, 0.15]} />
-          <meshStandardMaterial color="#0f172a" />
-        </mesh>
-        <mesh>
-          <planeGeometry args={[0.24, 0.13]} />
-          <meshStandardMaterial color="#ffffff" />
-        </mesh>
-        <Text
-          position={[0, 0, 0.005]}
-          fontSize={0.045}
-          color="#0f172a"
-          anchorX="center"
-          anchorY="middle"
-          fontWeight="bold"
-          maxWidth={0.22}
-          textAlign="center"
-        >
-          {item.name}
-        </Text>
-      </group>
+      <Text position={[0, 0.18, 0.15]} fontSize={0.06} color="#ffffff">
+        {item.name}
+      </Text>
     </group>
   );
 }
@@ -1586,16 +1380,8 @@ function RenderBunsenBurner({ isHeating }: { isHeating: boolean }) {
       <Cylinder args={[0.06, 0.06, 0.04, 32]} position={[0, 0.10, 0]}>
         <meshStandardMaterial color="#0284c7" metalness={0.8} />
       </Cylinder>
-      {/* Air collar ring around the barrel */}
-      <Cylinder args={[0.05, 0.05, 0.035, 24]} position={[0, 0.14, 0]}>
-        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.3} />
-      </Cylinder>
-      {/* Rubber gas inlet hose from the base */}
-      <Cylinder args={[0.014, 0.014, 0.24, 12]} position={[0.12, 0.06, 0]} rotation-z={Math.PI / 2}>
-        <meshStandardMaterial color="#1e293b" roughness={0.9} />
-      </Cylinder>
 
-        {/* Realistic Flame Cone & Light */}
+      {/* Realistic Flame Cone & Light */}
       {isHeating && (
         <group position={[0, 0.44, 0]}>
           <Float speed={18} floatIntensity={0.6}>
@@ -1609,232 +1395,6 @@ function RenderBunsenBurner({ isHeating }: { isHeating: boolean }) {
           </Float>
         </group>
       )}
-    </group>
-  );
-}
-
-// BURETTE CLAMPED ON A RETORT STAND (used for precise titration)
-function RenderBurette({
-  item,
-  isHeating,
-  isBubbling,
-  temperature = 22,
-}: {
-  item: TableItem;
-  isHeating: boolean;
-  isBubbling?: boolean;
-  temperature?: number;
-}) {
-  const liquidColor = item.contents?.color || '#38bdf8';
-  const hasLiquid = (item.contents?.chemicals?.length ?? 0) > 0;
-  const isReacting = isHeating || isBubbling || temperature >= 100 || Boolean(item.contents?.gasEvolved);
-  const fill = hasLiquid ? fillPercent(item) : 0;
-  const liqMax = 0.5;
-  const liqHeight = hasLiquid ? Math.max(0.03, liqMax * Math.min(1, fill)) : 0;
-
-  return (
-    <group>
-      {/* Heavy cast-iron base */}
-      <Cylinder args={[0.22, 0.24, 0.06, 32]} position={[0, 0.03, 0]}>
-        <meshStandardMaterial color="#1e293b" roughness={0.35} metalness={0.8} />
-      </Cylinder>
-      {/* Vertical retort rod */}
-      <Cylinder args={[0.02, 0.02, 0.95, 16]} position={[0, 0.5, 0]}>
-        <meshStandardMaterial color="#94a3b8" roughness={0.3} metalness={0.95} />
-      </Cylinder>
-      {/* Clamp arm holding the burette */}
-      <Cylinder args={[0.015, 0.015, 0.36, 12]} position={[0.14, 0.8, 0]} rotation-z={Math.PI / 2}>
-        <meshStandardMaterial color="#cbd5e1" roughness={0.3} metalness={0.9} />
-      </Cylinder>
-
-      {/* Burette glass tube beside the rod */}
-      <group position={[0.3, 0, 0]}>
-        <Cylinder args={[0.06, 0.06, 0.72, 32]} position={[0, 0.6, 0]}>
-          <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.5} />
-        </Cylinder>
-        {/* Graduation marks */}
-        {Array.from({ length: 10 }).map((_, i) => (
-          <Box key={i} args={[0.028, 0.004, 0.01]} position={[0.008, 0.3 + i * 0.06, 0.058]}>
-            <meshBasicMaterial color="#ffffff" />
-          </Box>
-        ))}
-        {/* Glass stopcock */}
-        <Cylinder args={[0.05, 0.05, 0.09, 24]} position={[0, 0.2, 0]} rotation-z={Math.PI / 2}>
-          <meshStandardMaterial color="#b45309" roughness={0.4} metalness={0.7} />
-        </Cylinder>
-        {/* Tapered delivery tip */}
-        <Cylinder args={[0.03, 0.015, 0.13, 24]} position={[0, 0.07, 0]}>
-          <meshPhysicalMaterial color="#ffffff" roughness={0.05} transparent opacity={0.5} />
-        </Cylinder>
-        {/* Liquid column in the upper tube */}
-        {hasLiquid && (
-          <Cylinder args={[0.052, 0.052, liqHeight, 24]} position={[0, 0.6 - liqHeight / 2, 0]}>
-            <meshStandardMaterial
-              color={liquidColor}
-              emissive={liquidColor}
-              emissiveIntensity={0.3}
-              transparent
-              opacity={0.92}
-            />
-          </Cylinder>
-        )}
-        {hasLiquid && <LiquidMeniscus color={liquidColor} radius={0.052} y={0.6} />}
-        <SmokeFumesSystem active={isReacting} color="#f8fafc" height={0.8} />
-      </group>
-    </group>
-  );
-}
-
-// MEASURING / GRADUATED CYLINDER
-function RenderCylinder({
-  item,
-  isHeating,
-  isBubbling,
-  temperature = 22,
-}: {
-  item: TableItem;
-  isHeating: boolean;
-  isBubbling?: boolean;
-  temperature?: number;
-}) {
-  const liquidColor = item.contents?.color || '#38bdf8';
-  const hasLiquid = (item.contents?.chemicals?.length ?? 0) > 0;
-  const isReacting = isHeating || isBubbling || temperature >= 100 || Boolean(item.contents?.gasEvolved);
-  const fill = hasLiquid ? fillPercent(item) : 0;
-  const liqMax = 0.5;
-  const liqHeight = hasLiquid ? Math.max(0.03, liqMax * Math.min(1, fill)) : 0;
-
-  return (
-    <group>
-      {/* Glass body */}
-      <Cylinder args={[0.14, 0.13, 0.6, 32]} position={[0, 0.3, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.5} />
-      </Cylinder>
-      {/* Flared base */}
-      <Cylinder args={[0.19, 0.14, 0.035, 32]} position={[0, 0.017, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} transparent opacity={0.6} />
-      </Cylinder>
-      {/* Graduation marks */}
-      {Array.from({ length: 10 }).map((_, i) => (
-        <Box key={i} args={[0.05, 0.004, 0.01]} position={[0.015, 0.05 + i * 0.05, 0.134]}>
-          <meshBasicMaterial color="#ffffff" />
-        </Box>
-      ))}
-      {/* Liquid column */}
-      {hasLiquid && (
-        <Cylinder args={[0.125, 0.12, liqHeight, 32]} position={[0, liqHeight / 2 + 0.03, 0]}>
-          <meshStandardMaterial
-            color={liquidColor}
-            emissive={liquidColor}
-            emissiveIntensity={0.3}
-            transparent
-            opacity={0.92}
-          />
-        </Cylinder>
-      )}
-      {hasLiquid && <LiquidMeniscus color={liquidColor} radius={0.12} y={liqHeight + 0.028} />}
-      <SmokeFumesSystem active={isReacting} color="#f8fafc" height={0.7} />
-    </group>
-  );
-}
-
-// EYE DROPPER / PIPETTE
-function RenderDropper({
-  item,
-  isHeating,
-  isBubbling,
-  temperature = 22,
-}: {
-  item: TableItem;
-  isHeating: boolean;
-  isBubbling?: boolean;
-  temperature?: number;
-}) {
-  const liquidColor = item.contents?.color || '#38bdf8';
-  const hasLiquid = (item.contents?.chemicals?.length ?? 0) > 0;
-  const isReacting = isHeating || isBubbling || temperature >= 100 || Boolean(item.contents?.gasEvolved);
-  const fill = hasLiquid ? fillPercent(item) : 0;
-  const liqHeight = hasLiquid ? Math.max(0.02, 0.2 * Math.min(1, fill)) : 0;
-
-  return (
-    <group>
-      {/* Rubber bulb */}
-      <Sphere args={[0.075, 24, 24]} position={[0, 0.4, 0]}>
-        <meshStandardMaterial color="#dc2626" roughness={0.7} />
-      </Sphere>
-      {/* Glass pipette body */}
-      <Cylinder args={[0.022, 0.018, 0.42, 24]} position={[0, 0.16, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.55} />
-      </Cylinder>
-      {/* Liquid inside */}
-      {hasLiquid && (
-        <Cylinder args={[0.016, 0.014, liqHeight, 16]} position={[0, liqHeight / 2 + 0.05, 0]}>
-          <meshStandardMaterial
-            color={liquidColor}
-            emissive={liquidColor}
-            emissiveIntensity={0.3}
-            transparent
-            opacity={0.92}
-          />
-        </Cylinder>
-      )}
-      {/* Tapered glass tip */}
-      <Cylinder args={[0.014, 0.006, 0.07, 16]} position={[0, -0.055, 0]}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} transparent opacity={0.55} />
-      </Cylinder>
-      <SmokeFumesSystem active={isReacting} color="#f8fafc" height={0.5} />
-    </group>
-  );
-}
-
-// DIGITAL THERMOMETER PROBE WITH LCD READOUT
-function RenderThermometer({ item }: { item: TableItem }) {
-  const temp = item.contents?.temperature ?? 22;
-  return (
-    <group>
-      {/* Stainless steel probe */}
-      <Cylinder args={[0.025, 0.025, 0.5, 24]} position={[0, 0.25, 0]}>
-        <meshStandardMaterial color="#cbd5e1" roughness={0.15} metalness={0.95} />
-      </Cylinder>
-      {/* Probe tip */}
-      <Cylinder args={[0.02, 0.02, 0.09, 16]} position={[0, 0.54, 0]}>
-        <meshStandardMaterial color="#94a3b8" roughness={0.2} metalness={0.95} />
-      </Cylinder>
-      {/* Digital display body */}
-      <Box args={[0.2, 0.1, 0.05]} position={[0, 0.07, 0]}>
-        <meshStandardMaterial color="#0f172a" roughness={0.2} metalness={0.6} />
-      </Box>
-      {/* Green LCD backlight */}
-      <Box args={[0.165, 0.06, 0.02]} position={[0, 0.07, 0.035]}>
-        <meshStandardMaterial color="#052e16" emissive="#22c55e" emissiveIntensity={0.9} />
-      </Box>
-      <Text position={[0, 0.07, 0.05]} fontSize={0.045} color="#a7f3d0" anchorX="center" anchorY="middle">
-        {temp.toFixed(0)}°C
-      </Text>
-    </group>
-  );
-}
-
-// TRIPOD STAND + WIRE GAUZE (for heating flasks)
-function RenderTripod() {
-  return (
-    <group>
-      {/* Three angled legs */}
-      {[0, 120, 240].map((deg) => (
-        <group key={deg} rotation-y={(deg * Math.PI) / 180}>
-          <Box args={[0.035, 0.42, 0.035]} position={[0, 0.21, 0.13]} rotation-x={-0.32}>
-            <meshStandardMaterial color="#334155" roughness={0.4} metalness={0.7} />
-          </Box>
-        </group>
-      ))}
-      {/* Support ring */}
-      <Cylinder args={[0.17, 0.17, 0.02, 32]} position={[0, 0.42, 0]}>
-        <meshStandardMaterial color="#475569" roughness={0.3} metalness={0.8} />
-      </Cylinder>
-      {/* Wire gauze mesh */}
-      <Cylinder args={[0.16, 0.16, 0.008, 32]} position={[0, 0.425, 0]}>
-        <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.9} />
-      </Cylinder>
     </group>
   );
 }

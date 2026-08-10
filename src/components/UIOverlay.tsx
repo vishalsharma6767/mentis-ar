@@ -1,42 +1,31 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
 import {
+  Sparkles,
   FlaskConical,
+  Atom,
+  Dna,
+  Play,
   Mic,
+  ChevronRight,
+  Activity,
   Volume2,
-  RotateCcw,
-  Languages,
-  Brain,
-  Smartphone,
-  X
+  RotateCcw
 } from 'lucide-react';
-import { Experiment, EXPERIMENTS, NovaLanguage, NovaModelInfo } from '../types';
-import { QRCodeSVG } from 'qrcode.react';
-import { remoteControl } from '../remote/RemoteBridge';
-import { DroneMode } from '../drone/droneModes';
-import { LandingPage } from './LandingPage';
-import { LabDashboard } from './LabDashboard';
+import { Experiment, EXPERIMENTS } from '../types';
 
 interface UIOverlayProps {
-  mode: 'menu' | 'dashboard' | 'countdown' | 'lab' | 'drone' | 'campus';
+  mode: 'menu' | 'countdown' | 'lab';
   countdown: number;
-  world: 'chemistry' | 'drone';
-  onOpenLab: (world: 'chemistry' | 'drone') => void;
-  onBack: () => void;
-  droneMode: DroneMode;
-  onSelectDroneMode: (mode: DroneMode) => void;
+  selectedLab: 'chemistry' | 'physics' | 'biology';
+  setSelectedLab: (lab: 'chemistry' | 'physics' | 'biology') => void;
   labMode: 'guided' | 'sandbox';
   setLabMode: (mode: 'guided' | 'sandbox') => void;
   selectedExperiment: Experiment | null;
   onSelectExperiment: (exp: Experiment) => void;
   onStartVR: () => void;
+  novaMessage: string;
   isListening: boolean;
   voiceError?: string | null;
-  language: NovaLanguage;
-  onLanguageChange: (lang: NovaLanguage) => void;
-  models: NovaModelInfo[];
-  activeModel: string;
-  onModelChange: (modelId: string) => void;
   onAskNovaGuide?: () => void;
   onResetExperimentEquipment?: () => void;
 }
@@ -44,121 +33,183 @@ interface UIOverlayProps {
 export function UIOverlay({
   mode,
   countdown,
-  world,
-  onOpenLab,
-  onBack,
-  droneMode,
-  onSelectDroneMode,
+  selectedLab,
+  setSelectedLab,
   labMode,
   setLabMode,
   selectedExperiment,
   onSelectExperiment,
   onStartVR,
+  novaMessage,
   isListening,
   voiceError,
-  language,
-  onLanguageChange,
-  models,
-  activeModel,
-  onModelChange,
   onAskNovaGuide,
   onResetExperimentEquipment,
 }: UIOverlayProps) {
-  const [pairInfo, setPairInfo] = useState<{ code: string; ip: string | null; port: number } | null>(null);
-  const [showPairChip, setShowPairChip] = useState(true);
-  const [, forceTick] = useState(0);
-
-  useEffect(() => {
-    fetch('/api/control/info')
-      .then((r) => r.json())
-      .then((d) => setPairInfo(d))
-      .catch(() => {});
-  }, []);
-
-  // Poll the shared bridge state so the chip shows live link status.
-  useEffect(() => {
-    const id = setInterval(() => forceTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Phone controller is only used by the drone lab — chemistry has no phone controller.
-  const showPhoneController = world === 'drone' && (mode === 'dashboard' || mode === 'campus' || mode === 'drone');
-
   return (
     <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-6">
-      {/* Bottom Left - Phone Controller Pairing Chip (drone lab only, dismissible) */}
-      {showPairChip && pairInfo && showPhoneController && (
-        <div className="absolute bottom-6 left-6 pointer-events-auto z-20">
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-slate-900/90 border border-emerald-500/30 backdrop-blur-xl rounded-2xl shadow-xl p-3 flex items-center gap-3"
-          >
-            <div className="bg-white rounded-lg p-1 shrink-0">
-              <QRCodeSVG
-                value={`http://${pairInfo.ip || location.hostname}:${pairInfo.port}/controller?code=${pairInfo.code}`}
-                size={72}
-                level="M"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span
-                className={`flex items-center gap-1.5 text-[10px] font-bold rounded-lg px-1.5 py-0.5 ${
-                  remoteControl.connected && remoteControl.controllerCount > 0
-                    ? 'bg-emerald-500/15 text-emerald-300'
-                    : 'bg-slate-800/80 text-slate-400'
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${
-                    remoteControl.connected && remoteControl.controllerCount > 0
-                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
-                      : 'bg-red-500'
-                  }`}
-                />
-                {remoteControl.connected && remoteControl.controllerCount > 0
-                  ? `Phone connected${remoteControl.controllerCount > 1 ? ` (${remoteControl.controllerCount})` : ''}`
-                  : remoteControl.connected
-                    ? 'Lab linked — waiting for phone...'
-                    : 'Lab NOT linked — reload this tab'}
-              </span>
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                Scan to open the drone phone controller
-              </span>
-              <span className="text-[10px] font-bold text-slate-400">
-                Code: <span className="text-sky-300 font-mono tracking-widest text-[13px]">{pairInfo.code}</span>
-              </span>
-              <span className="text-[9px] font-mono text-slate-500">
-                http://{pairInfo.ip || location.hostname}:{pairInfo.port}/controller
-              </span>
-            </div>
-            <button
-              onClick={() => setShowPairChip(false)}
-              className="self-start p-1 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
-              title="Hide controller info"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </motion.div>
-        </div>
-      )}
-
       <AnimatePresence>
-        {mode === 'menu' && <LandingPage onOpenLab={onOpenLab} />}
+        {mode === 'menu' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex-1 flex flex-col justify-between max-w-7xl w-full mx-auto"
+          >
+            {/* Header */}
+            <header className="flex justify-between items-start pointer-events-auto">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 p-0.5 shadow-[0_0_30px_rgba(37,99,235,0.5)]">
+                  <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-blue-400">
+                    <Sparkles className="w-6 h-6 animate-pulse" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-black tracking-wider text-white flex items-center gap-2">
+                    MENTIS <span className="text-blue-500 font-light">VR LAB</span>
+                  </h1>
+                  <p className="text-xs text-blue-300 font-medium tracking-widest uppercase">
+                    Interactive Chemistry Simulator
+                  </p>
+                </div>
+              </div>
 
-        {mode === 'dashboard' && (
-          <LabDashboard
-            world={world}
-            labMode={labMode}
-            setLabMode={setLabMode}
-            selectedExperiment={selectedExperiment}
-            onSelectExperiment={onSelectExperiment}
-            droneMode={droneMode}
-            onSelectDroneMode={onSelectDroneMode}
-            onStartVR={onStartVR}
-            onBack={onBack}
-          />
+              <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 p-1.5 rounded-2xl backdrop-blur-xl">
+                <button
+                  onClick={() => setLabMode('guided')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    labMode === 'guided'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Guided Protocol
+                </button>
+                <button
+                  onClick={() => setLabMode('sandbox')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    labMode === 'sandbox'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Open Sandbox
+                </button>
+              </div>
+            </header>
+
+            {/* Center Content */}
+            <main className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center my-auto">
+              {/* Left Column - Lab Discipline Selection */}
+              <div className="md:col-span-4 space-y-4 pointer-events-auto">
+                <span className="text-xs font-bold text-blue-400 uppercase tracking-widest block mb-2">
+                  1. Select Discipline
+                </span>
+
+                <button
+                  onClick={() => setSelectedLab('chemistry')}
+                  className={`w-full p-5 rounded-3xl border transition-all flex items-center gap-4 text-left ${
+                    selectedLab === 'chemistry'
+                      ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.3)] scale-[1.02]'
+                      : 'bg-black/40 border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                    <FlaskConical className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-lg">Chemistry Lab</div>
+                    <div className="text-xs text-slate-400">Reagents, Neutralization & Reactions</div>
+                  </div>
+                </button>
+
+                <button
+                  disabled
+                  className="w-full p-5 rounded-3xl border border-white/5 bg-black/20 text-slate-500 flex items-center gap-4 text-left opacity-50 cursor-not-allowed"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-500 flex items-center justify-center shrink-0">
+                    <Atom className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-400 text-lg">Physics Lab</div>
+                    <div className="text-xs text-slate-600">Optics, Mechanics & Electromagnetism</div>
+                  </div>
+                </button>
+
+                <button
+                  disabled
+                  className="w-full p-5 rounded-3xl border border-white/5 bg-black/20 text-slate-500 flex items-center gap-4 text-left opacity-50 cursor-not-allowed"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-500 flex items-center justify-center shrink-0">
+                    <Dna className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-400 text-lg">Biology Lab</div>
+                    <div className="text-xs text-slate-600">Cellular Structures & Dissection</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Middle Column - Experiment Catalog / Guided Selection */}
+              <div className="md:col-span-8 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 pointer-events-auto shadow-2xl space-y-6">
+                <div>
+                  <span className="text-xs font-bold text-blue-400 uppercase tracking-widest block mb-1">
+                    2. Choose Protocol
+                  </span>
+                  <h2 className="text-2xl font-black text-white">Select Predefined Experiment</h2>
+                </div>
+
+                {labMode === 'guided' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {EXPERIMENTS.map((exp) => (
+                      <button
+                        key={exp.id}
+                        onClick={() => onSelectExperiment(exp)}
+                        className={`p-5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                          selectedExperiment?.id === exp.id
+                            ? 'bg-blue-600/30 border-blue-400 shadow-xl ring-2 ring-blue-500/50'
+                            : 'bg-white/5 border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 block mb-1">
+                            Guided Protocol
+                          </span>
+                          <h3 className="font-bold text-white text-sm mb-1.5">{exp.name}</h3>
+                          <p className="text-[11px] text-sky-200 line-clamp-2 mb-2 italic">
+                            Aim: {exp.aim}
+                          </p>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            Includes: {exp.initialTableItems.map((i) => i.name.split(' ')[0]).join(', ')}
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between text-xs font-bold text-blue-400">
+                          <span>{exp.steps.length} Steps</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-2xl bg-blue-950/40 border border-blue-500/20 text-slate-300 text-sm leading-relaxed">
+                    <p className="font-bold text-white mb-2">Open Sandbox Mode Activated</p>
+                    <p>
+                      You have full access to all wall shelves. Pick glassware, mix reagents, ignite the Bunsen burner, and conduct unrestricted reactions!
+                    </p>
+                  </div>
+                )}
+
+                {/* Enter Lab Action Button */}
+                <button
+                  onClick={onStartVR}
+                  disabled={selectedLab !== 'chemistry'}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-base transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] flex justify-center items-center gap-3 border border-blue-400/40"
+                >
+                  <Play className="w-5 h-5 fill-current" /> ENTER CHEMISTRY LAB
+                </button>
+              </div>
+            </main>
+          </motion.div>
         )}
 
         {mode === 'countdown' && (
@@ -171,17 +222,10 @@ export function UIOverlay({
             <div className="text-[12rem] font-black text-white drop-shadow-[0_0_50px_rgba(37,99,235,0.8)] mb-8 leading-none">
               {countdown}
             </div>
-            <div
-              className={`text-white px-10 py-4 rounded-full font-black uppercase tracking-[0.3em] shadow-[0_0_30px_rgba(37,99,235,0.6)] animate-pulse text-center ${
-                world === 'drone' ? 'bg-emerald-600' : 'bg-blue-600'
-              }`}
-            >
-              {world === 'drone' ? 'Entering Drone Academy Campus...' : 'Entering Chemistry Lab Room...'}
-              <br />
+            <div className="bg-blue-600 text-white px-10 py-4 rounded-full font-black uppercase tracking-[0.3em] shadow-[0_0_30px_rgba(37,99,235,0.6)] animate-pulse text-center">
+              Entering Chemistry Lab Room...<br />
               <span className="text-[10px] font-medium opacity-80 normal-case tracking-normal mt-1 block">
-                {world === 'drone'
-                  ? 'Walk to the Flight Terminal and press E to launch your drone'
-                  : 'Use WASD to Walk, Mouse to Look Around, Keys 1-3 to Open Racks'}
+                Use WASD to Walk, Mouse to Look Around, Keys 1-3 to Open Racks
               </span>
             </div>
           </motion.div>
@@ -189,52 +233,8 @@ export function UIOverlay({
 
         {mode === 'lab' && (
           <>
-            {/* Top Left - AI LANGUAGE + MODEL ROUTER CONTROLS */}
-            <div className="absolute top-6 left-6 pointer-events-auto z-20 flex items-center gap-2">
-              <div className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-xl rounded-2xl shadow-xl px-3 py-1.5 flex items-center gap-2">
-                <Languages className="w-4 h-4 text-sky-400 shrink-0" />
-                <div className="flex bg-slate-800 rounded-lg p-0.5">
-                  <button
-                    onClick={() => onLanguageChange('en-GB')}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide transition-all ${
-                      language === 'en-GB' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:text-white'
-                    }`}
-                    title="English (UK) — British voice"
-                  >
-                    EN
-                  </button>
-                  <button
-                    onClick={() => onLanguageChange('hi-IN')}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide transition-all ${
-                      language === 'hi-IN' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:text-white'
-                    }`}
-                    title="हिंग्लिश — Indian teacher voice (Hindi + English)"
-                  >
-                    हिं
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-xl rounded-2xl shadow-xl px-3 py-1.5 flex items-center gap-2">
-                <Brain className="w-4 h-4 text-sky-400 shrink-0" />
-                <select
-                  value={activeModel}
-                  onChange={(e) => onModelChange(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-[11px] font-bold text-sky-200 px-1.5 py-1 rounded-lg focus:outline-none focus:border-sky-500 cursor-pointer max-w-[190px]"
-                  title="Choose which free AI model Nova uses"
-                >
-                  {models.length === 0 && <option value={activeModel}>Default model…</option>}
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label} · {m.providerLabel}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Below AI Controls - Small Compact Experiment Badge & Selector */}
-            <div className="absolute top-20 left-6 pointer-events-auto z-20">
+            {/* Top Left - Small Compact Experiment Badge & Selector */}
+            <div className="absolute top-6 left-6 pointer-events-auto z-20">
               {labMode === 'guided' && selectedExperiment && (
                 <motion.div
                   initial={{ x: -20, opacity: 0 }}
@@ -311,6 +311,22 @@ export function UIOverlay({
                 </div>
               )}
             </div>
+
+            {/* TOP CENTER - MINIMAL NON-INTRUSIVE STATUS BADGE */}
+            {novaMessage && (
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-auto max-w-lg w-full px-4 z-20">
+                <motion.div
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="bg-slate-900/90 border border-sky-500/30 backdrop-blur-md text-white px-4 py-2 rounded-2xl shadow-lg text-center flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <p className="text-xs text-sky-100 font-medium truncate">
+                    {novaMessage}
+                  </p>
+                </motion.div>
+              </div>
+            )}
           </>
         )}
       </AnimatePresence>

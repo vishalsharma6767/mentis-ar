@@ -1,9 +1,8 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { routeChat, getAvailableModels, getModel } from "./server/aiRouter";
-import { attachControlServer, getPairCode, getLanIp, getRecentMessages, getClientCount } from "./server/controlServer";
 
 dotenv.config();
 
@@ -12,57 +11,43 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Phone controller assets must never be cached, otherwise an old
-// controller.js/html keeps running on the phone after an update.
-app.use("/controller", (_req, res, next) => {
-  res.setHeader("Cache-Control", "no-store, max-age=0");
-  next();
-});
-
-// Phone controller pairing info (shown on the computer screen)
-app.get("/api/control/info", (_req, res) => {
-  res.json({ code: getPairCode(), ip: getLanIp(), port: PORT });
-});
-
-// Debug: last few messages received from the paired phone controller.
-app.get("/api/control/debug", (_req, res) => {
-  res.json({ messages: getRecentMessages(), clients: getClientCount() });
-});
-
-// Clean phone-controller URL (/controller -> controller.html). Served before
-// the Vite SPA middleware / static fallback so it doesn't load the lab app.
-app.get("/controller", (_req, res) => {
-  res.redirect("/controller.html");
+// Shared Gemini client
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
 });
 
 // API routes
-app.get("/api/nova/models", (_req, res) => {
-  res.json({ models: getAvailableModels() });
-});
-
 app.post("/api/nova/chat", async (req, res) => {
   try {
-    const { message, experiment, model, language } = req.body || {};
+    const { message, experiment } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({ text: `Nova AI is ready in your lab! You asked: "${message || 'Hello'}". Perform your experiment step by step!` });
+    }
 
-    const selected = getModel(model);
-    const result = await routeChat({
-      message,
-      experiment,
-      model: selected?.id,
-      language,
+    const systemInstruction = `You are Nova, an expert AI Lab Assistant in a 3D Virtual Chemistry Lab. 
+    Your goal is to guide students through experiments safely and educationally.
+    Current experiment: ${experiment || 'None selected'}.
+    Keep your responses encouraging, clear, and concise (1-2 sentences maximum).
+    IMPORTANT: Output plain spoken English text only. Do NOT use markdown symbols like hashtags (#), asterisks (*), underscores (_), dollar signs ($), or bullet lists, because your output will be read aloud by speech synthesis.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: message || "Hello Nova",
+      config: {
+        systemInstruction,
+      },
     });
 
-    res.json({
-      text: result.text,
-      localFallback: result.usedLocalFallback,
-      model: selected ? { id: selected.id, label: selected.label, providerLabel: selected.providerLabel } : null,
-    });
+    res.json({ text: response.text || "I am right here with you in the lab. Select chemicals to perform your reaction!" });
   } catch (error: any) {
     console.error("Nova API Error:", error);
-    res.json({
-      text: "I am observing your chemical workstation. Select an item or pour chemicals to perform your reaction!",
-      model: null,
-    });
+    res.json({ text: "I am observing your chemical workstation. Select an item or pour chemicals to perform your reaction!" });
   }
 });
 
@@ -82,11 +67,9 @@ async function startServer() {
     });
   }
 
-  const httpServer = app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
-
-  attachControlServer(httpServer);
 }
 
 startServer();
