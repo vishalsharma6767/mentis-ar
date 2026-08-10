@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { VRButton, XR, Controllers, Hands } from '@react-three/xr';
 import { OrbitControls } from '@react-three/drei';
@@ -7,14 +7,22 @@ import { NovaAssistant } from './components/LabAssistant';
 import { UIOverlay } from './components/UIOverlay';
 import { DesktopController } from './components/DesktopController';
 import { TableWorkbenchUI } from './components/TableWorkbenchUI';
-import { Experiment, EXPERIMENTS, InventoryItem, TableItem } from './types';
+import { RemoteBridge } from './remote/RemoteBridge';
+import { DroneSim } from './drone/DroneSim';
+import { DroneHUD } from './drone/DroneHUD';
+import { droneCmd, droneState } from './drone/droneState';
+import { DroneCampus, CAMPUS_SPAWN } from './world/DroneCampus';
+import { CampusHUD } from './world/CampusHUD';
+import type { DroneMode } from './drone/droneModes';
+import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage } from './types';
 import { useVoice } from './hooks/useVoice';
 
 export default function App() {
-  const [mode, setMode] = useState<'menu' | 'countdown' | 'lab'>('menu');
+  const [mode, setMode] = useState<'menu' | 'dashboard' | 'countdown' | 'lab' | 'drone' | 'campus'>('menu');
   const [countdown, setCountdown] = useState(5);
 
-  const [selectedLab, setSelectedLab] = useState<'chemistry' | 'physics' | 'biology'>('chemistry');
+  const [world, setWorld] = useState<'chemistry' | 'drone'>('chemistry');
+  const [droneMode, setDroneMode] = useState<DroneMode>('free');
   const [labMode, setLabMode] = useState<'guided' | 'sandbox'>('guided');
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(EXPERIMENTS[0]);
 
@@ -23,6 +31,17 @@ export default function App() {
     'Welcome to the Mentis Chemistry Laboratory. Select a predefined experiment or enter sandbox mode.'
   );
 
+  // Nova AI language + model router state
+  const [language, setLanguage] = useState<NovaLanguage>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('mentis-language') : null;
+    return saved === 'en-GB' ? 'en-GB' : 'hi-IN';
+  });
+  const [activeModel, setActiveModel] = useState<string>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('mentis-model') : null;
+    return saved || 'local:tutor';
+  });
+  const [availableModels, setAvailableModels] = useState<NovaModelInfo[]>([]);
+
   // Table items state
   const [tableItems, setTableItems] = useState<TableItem[]>([]);
 
@@ -30,6 +49,7 @@ export default function App() {
   const [activeRackCategory, setActiveRackCategory] = useState<'glassware' | 'chemicals' | 'equipment' | null>(null);
   const [isHeating, setIsHeating] = useState(false);
   const [reactionMessage, setReactionMessage] = useState<string | null>(null);
+  const kmno4DecomposedRef = useRef(false);
 
   const loadExperimentEquipment = useCallback((exp: Experiment) => {
     if (exp && exp.initialTableItems) {
@@ -46,7 +66,65 @@ export default function App() {
     [selectedExperiment, labMode, tableItems]
   );
 
-  const { isListening, isSupported, voiceError, startListening, stopListening, speak } = useVoice(handleUserSpeech);
+  const { isListening, isSupported, voiceError, voiceLanguage, setVoiceLanguageMode, startListening, stopListening, speak } = useVoice(handleUserSpeech);
+
+  // Fetch the list of usable AI models from the router (based on configured keys).
+  useEffect(() => {
+    fetch('/api/nova/models')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.models?.length) {
+          setAvailableModels(data.models);
+          const stillAvailable = data.models.some((m: NovaModelInfo) => m.id === activeModel);
+          if (!stillAvailable) {
+            // Current choice is gone — pick the best available model.
+            const next = data.models[0]?.id || 'local:tutor';
+            setActiveModel(next);
+            try {
+              localStorage.setItem('mentis-model', next);
+            } catch {
+              // ignore
+            }
+          } else if (activeModel === 'local:tutor') {
+            // A real API key is configured — auto-upgrade from the offline tutor
+            // to the first live model so the lab uses true AI immediately.
+            const live = data.models.find((m: NovaModelInfo) => m.needsKey && m.provider !== 'pollinations');
+            if (live) {
+              setActiveModel(live.id);
+              try {
+                localStorage.setItem('mentis-model', live.id);
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Keep the TTS voice in sync with the chosen language (hi-IN vs en-GB).
+  useEffect(() => {
+    setVoiceLanguageMode(language);
+  }, [language, setVoiceLanguageMode]);
+
+  const handleLanguageChange = (lang: NovaLanguage) => {
+    setLanguage(lang);
+    try {
+      localStorage.setItem('mentis-language', lang);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleModelChange = (modelId: string) => {
+    setActiveModel(modelId);
+    try {
+      localStorage.setItem('mentis-model', modelId);
+    } catch {
+      // ignore
+    }
+  };
 
   const handleSelectExperiment = (exp: Experiment) => {
     setSelectedExperiment(exp);
@@ -97,27 +175,72 @@ export default function App() {
   }, [mode]);
 
   const startVR = () => {
+    setCountdown(5);
     setMode('countdown');
-    speak('Entering chemistry lab room. Use WASD to walk, mouse to look around, and keys 1, 2, 3 for racks.');
+    if (world === 'drone') {
+      droneState.mode = droneMode;
+      droneCmd.mode = droneMode;
+      speak('Welcome to the Mentis Drone Academy. Walk to the flight terminal and press E to launch your drone.');
+    } else {
+      speak('Entering chemistry lab room. Use WASD to walk, mouse to look around, and keys 1, 2, 3 for racks.');
+    }
   };
+
+  const openLab = (w: 'chemistry' | 'drone') => {
+    setWorld(w);
+    setMode('dashboard');
+  };
+
+  const backToLabs = () => {
+    setMode('menu');
+  };
+
+  // Launch the drone from the campus flight terminal -> the flight sim.
+  const launchDrone = () => {
+    droneState.mode = droneMode;
+    droneCmd.mode = droneMode;
+    droneCmd.reset++;
+    setMode('drone');
+  };
+
+  // Leave a flight back to the walkable campus (drone pauses on its pad).
+  const exitFlight = () => {
+    setMode('campus');
+  };
+
+  // Returning to the campus re-spawns the pilot at the academy entrance.
+  useEffect(() => {
+    if (mode === 'campus') {
+      window.dispatchEvent(
+        new CustomEvent('campus-respawn', { detail: { x: CAMPUS_SPAWN.x, y: CAMPUS_SPAWN.y, z: CAMPUS_SPAWN.z } })
+      );
+    }
+  }, [mode]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (mode === 'countdown' && countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (mode === 'countdown' && countdown === 0) {
-      setMode('lab');
-      if (labMode === 'guided' && selectedExperiment) {
-        loadExperimentEquipment(selectedExperiment);
-        fetchNovaResponse(
-          `Entered lab for ${selectedExperiment.name}. Aim: ${selectedExperiment.aim}. Welcome me to the lab, state the aim, and guide me on step 1.`
-        );
+      } else if (mode === 'countdown' && countdown === 0) {
+      if (world === 'drone') {
+        // Drone academy is silent — no Nova chemistry voice leaks in here.
+        // Enter the walkable campus; the pilot launches the drone at the
+        // flight terminal.
+        setMode('campus');
       } else {
-        fetchNovaResponse('Sandbox mode ready. Press 1, 2, or 3 on your keyboard to choose apparatus.');
+        setMode('lab');
+        if (labMode === 'guided' && selectedExperiment) {
+          loadExperimentEquipment(selectedExperiment);
+          fetchNovaResponse(
+            `Entered lab for ${selectedExperiment.name}. Aim: ${selectedExperiment.aim}. Welcome me to the lab, state the aim, and guide me on step 1.`
+          );
+        } else {
+          fetchNovaResponse('Sandbox mode ready. Press 1, 2, or 3 on your keyboard to choose apparatus.');
+        }
       }
     }
     return () => clearTimeout(timer);
-  }, [mode, countdown, labMode, selectedExperiment, loadExperimentEquipment]);
+  }, [mode, countdown, labMode, selectedExperiment, loadExperimentEquipment, world, droneMode]);
 
   // Global Keyboard Shortcuts for Lab Control
   useEffect(() => {
@@ -171,6 +294,55 @@ export default function App() {
     };
   }, [mode, isSupported, isListening, startListening, stopListening, tableItems]);
 
+  // Continuous heating simulation: temperature climbs, liquids boil/evaporate,
+  // and KMnO₄ thermally decomposes releasing Oxygen gas.
+  useEffect(() => {
+    if (mode !== 'lab' || !isHeating) return;
+    kmno4DecomposedRef.current = false;
+
+    const tick = setInterval(() => {
+      setTableItems((prev) =>
+        prev.map((it) => {
+          if (!it.contents || !it.contents.chemicals?.length) return it;
+          const base = it.contents.temperature ?? 22;
+          const nextTemp = Math.min(320, base + 2.2);
+
+          let chems = it.contents.chemicals;
+          if (nextTemp > 98) {
+            chems = chems.map((c) => ({
+              ...c,
+              amount: Math.max(0, c.amount - (it.type === 'test-tube' ? 0.05 : 0.08)),
+            }));
+            chems = chems.filter((c) => c.amount > 0);
+          }
+
+          let contents: TableItem['contents'] = {
+            ...it.contents,
+            temperature: nextTemp,
+            chemicals: chems,
+          };
+
+          const hasKmno4 = chems.some((c) => c.id === 'kmno4');
+          if (hasKmno4 && nextTemp >= 200 && !kmno4DecomposedRef.current) {
+            kmno4DecomposedRef.current = true;
+            contents = {
+              ...contents,
+              color: '#581c87',
+              gasEvolved: 'O₂ gas — 2KMnO₄ → K₂MnO₄ + MnO₂ + O₂↑ (thermal decomposition)',
+            };
+            setReactionMessage('KMnO₄ decomposes at 200°C releasing Oxygen gas (O₂↑)!');
+            speak('Potassium Permanganate decomposes above two hundred degrees, releasing Oxygen gas.');
+            setTimeout(() => setReactionMessage(null), 6000);
+          }
+
+          return { ...it, contents };
+        })
+      );
+    }, 600);
+
+    return () => clearInterval(tick);
+  }, [mode, isHeating]);
+
   // Fetch response from Gemini / Nova AI
   const fetchNovaResponse = async (message: string) => {
     try {
@@ -184,6 +356,8 @@ export default function App() {
         body: JSON.stringify({
           message: `${message}. Items currently on workstation table: [${currentItemsStr}].`,
           experiment: labMode === 'guided' ? selectedExperiment?.name : 'Sandbox Mode',
+          model: activeModel,
+          language,
         }),
       });
 
@@ -281,6 +455,8 @@ export default function App() {
         body: JSON.stringify({
           message: promptText,
           experiment: labMode === 'guided' ? selectedExperiment?.name : 'Sandbox Mode',
+          model: activeModel,
+          language,
         }),
       });
 
@@ -312,48 +488,139 @@ export default function App() {
     speak(fallbackText);
   };
 
+  // Simple pH estimation from an acid/base mL balance.
+  const estimatePh = (baseMl: number, acidMl: number) => {
+    const diff = baseMl - acidMl;
+    if (Math.abs(diff) < 0.5) return 7 + diff;
+    if (diff > 0) {
+      // Excess base: pH climbs toward the ~13 max.
+      return Math.min(13, 7 + Math.log10(diff / 3 + 0.1) + 0.6);
+    }
+    // Excess acid: pH drops toward ~0.5.
+    return Math.max(0.5, 7 - Math.log10(-diff / 3 + 0.1) - 0.6);
+  };
+
   const finalizeReaction = (sourceItem: TableItem, targetItem: TableItem) => {
-    let newColor = targetItem.contents?.color || sourceItem.contents?.color || '#38bdf8';
-    let reactionNote = `Poured ${sourceItem.name} into ${targetItem.name}.`;
+    const sourceChems = sourceItem.contents?.chemicals || [];
+    const targetChems = targetItem.contents?.chemicals || [];
+    const sourceVol = totalVolume(sourceItem);
+    const targetVol = totalVolume(targetItem);
 
-    const sourceChemIds = sourceItem.contents?.chemicals.map((c) => c.id) || [];
-    const targetChemIds = targetItem.contents?.chemicals.map((c) => c.id) || [];
-    const allChemIds = [...sourceChemIds, ...targetChemIds, sourceItem.catalogId, targetItem.catalogId];
+    // 1. Transfer a solid measured amount per pour (never a shrinking fraction,
+    //    otherwise the source gets asymptotically smaller and the reaction never
+    //    reaches its endpoint — the colour would never change).
+    const pourAmount = Math.min(sourceVol, Math.max(8, Math.round(sourceVol * 0.7)));
+    const transferredChems = sourceChems.map((c) => {
+      if (sourceVol <= 0) return { ...c, amount: 0 };
+      const frac = pourAmount / sourceVol;
+      return { ...c, amount: Math.round(c.amount * frac) };
+    });
+    const remainingChems = sourceChems
+      .map((c, i) => ({ ...c, amount: c.amount - transferredChems[i].amount }))
+      .filter((c) => c.amount > 0);
+    const transferredVol = transferredChems.reduce((a, c) => a + c.amount, 0);
 
-    if (allChemIds.includes('naoh') && allChemIds.includes('hcl')) {
-      if (allChemIds.includes('phenolphthalein')) {
-        newColor = '#ec4899'; // Vibrant Magenta Pink
-        reactionNote = 'REACTION: Acid-Base Neutralization with Phenolphthalein turned solution MAGENTA PINK!';
-      } else {
-        newColor = '#e2e8f0'; // Neutral Salt Water
-        reactionNote = 'REACTION: HCl + NaOH formed Neutral Salt Water (NaCl + H₂O). Heat released!';
+    // 2. Merge the poured liquid into the target (sum the same species).
+    const mergedChems: { id: string; name: string; amount: number; color: string; formula?: string }[] = [...targetChems];
+    for (const tc of transferredChems) {
+      const idx = mergedChems.findIndex((x) => x.id === tc.id);
+      if (idx >= 0) {
+        mergedChems[idx] = { ...mergedChems[idx], amount: mergedChems[idx].amount + tc.amount };
+      } else if (tc.amount > 0) {
+        mergedChems.push(tc);
       }
-    } else if ((allChemIds.includes('cuso4') && allChemIds.includes('naoh')) || (allChemIds.includes('cuso4') && targetItem.name.includes('NaOH'))) {
-      newColor = '#1d4ed8'; // Deep Indigo Blue Precipitate
-      reactionNote = 'REACTION: CuSO₄ + 2NaOH ➔ Cu(OH)₂↓ (Gelatinous Blue Precipitate) + Na₂SO₄!';
-    } else if (allChemIds.includes('cuso4')) {
-      newColor = '#2563eb'; // Deep Sky Blue
-      reactionNote = 'Copper Sulfate (CuSO₄) dissolved into brilliant DEEP BLUE solution.';
-    } else if (allChemIds.includes('kmno4')) {
-      newColor = '#7e22ce'; // Intense Purple
-      reactionNote = 'Potassium Permanganate (KMnO₄) formed intense VIOLET PURPLE solution.';
-    } else if (allChemIds.includes('phenolphthalein')) {
-      newColor = '#fef08a'; // Light Indicator Yellow
-      reactionNote = 'Phenolphthalein indicator added into solution.';
     }
 
+    const hclMl = mergedChems.find((c) => c.id === 'hcl')?.amount || 0;
+    const naohMl = mergedChems.find((c) => c.id === 'naoh')?.amount || 0;
+    const indicatorMl = mergedChems.find((c) => c.id === 'phenolphthalein')?.amount || 0;
+    const cuso4Ml = mergedChems.find((c) => c.id === 'cuso4')?.amount || 0;
+    const kmno4Ml = mergedChems.find((c) => c.id === 'kmno4')?.amount || 0;
+    const h2oMl = mergedChems.find((c) => c.id === 'h2o')?.amount || 0;
+    const hasIndicator = indicatorMl > 0;
+    const ph = estimatePh(naohMl, hclMl);
+
+    // 3. Decide the outcome of the mixed contents.
+    let newColor: string;
+    let reactionNote = `Poured ${sourceItem.name} into ${targetItem.name}.`;
+    let outcomePrecipitate: string | undefined;
+    let outcomeGas: string | undefined;
+    let tempDelta = 0;
+
+    if (hclMl > 0 && naohMl > 0) {
+      // Acid–base neutralisation, shaded through the phenolphthalein endpoint.
+      tempDelta = 3;
+      const excess = naohMl - hclMl;
+      if (hasIndicator) {
+        if (excess >= 3) {
+          newColor = '#ec4899';
+          reactionNote = `Neutralisation: pH ${ph.toFixed(1)} — base in excess, phenolphthalein is MAGENTA PINK. HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l) + heat`;
+        } else if (excess >= 0) {
+          newColor = '#f9a8d4';
+          reactionNote = `Neutralisation: pH ${ph.toFixed(1)} — the endpoint! First permanent pink tint of phenolphthalein, HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l).`;
+        } else {
+          newColor = '#e9edf2';
+          reactionNote = `Neutralisation: pH ${ph.toFixed(1)} — still acidic, indicator colourless. Keep pouring the base, HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l).`;
+        }
+      } else {
+        newColor = '#c9d4de';
+        reactionNote = 'Neutralised clear solution — NaCl(aq) + H₂O(l) formed, exothermic heat released.';
+      }
+    } else if (kmno4Ml > 0 && hclMl > 0) {
+      newColor = '#a8a29e';
+      tempDelta = 2;
+      outcomeGas = 'Cl₂(g) — KMnO₄ oxidises HCl, releasing toxic Chlorine gas (work under the fume hood!)';
+      reactionNote = '2KMnO₄ + 16HCl(aq) → 2MnCl₂(aq) + 5Cl₂(g)↑ + 2KCl(aq) + 8H₂O(l) — vigorous oxidation, toxic Chlorine evolved.';
+    } else if (cuso4Ml > 0 && naohMl > 0) {
+      newColor = '#1d4ed8';
+      outcomePrecipitate = 'Cu(OH)₂(s) — gelatinous blue precipitate';
+      reactionNote = 'CuSO₄(aq) + 2NaOH(aq) → Cu(OH)₂(s)↓ (gelatinous blue precipitate) + Na₂SO₄(aq).';
+    } else if (cuso4Ml > 0) {
+      newColor = '#2563eb';
+      reactionNote = 'Copper Sulfate solution — aqueous Cu²⁺ ions give the brilliant deep-blue colour.';
+    } else if (kmno4Ml > 0) {
+      newColor = '#7e22ce';
+      reactionNote = 'Potassium Permanganate solution — intense violet-purple from the MnO₄⁻ ion.';
+    } else if (hasIndicator && naohMl > 0) {
+      newColor = '#ec4899';
+      reactionNote = 'Phenolphthalein turns MAGENTA PINK in alkaline Sodium Hydroxide — the indicator base form.';
+    } else if (hasIndicator) {
+      newColor = '#fef08a';
+      reactionNote = 'Phenolphthalein indicator added into the solution — colourless in acid, pink above pH 8.2.';
+    } else {
+      // Generic mixing: volume-weighted blend of the two liquids.
+      let blended = mixColors(
+        targetItem.contents?.color || '#38bdf8',
+        sourceItem.contents?.color || '#38bdf8',
+        targetVol / Math.max(1, targetVol + transferredVol)
+      );
+      // Distilled water dilutes/lightens the mixture.
+      if (h2oMl > 0) blended = mixColors(blended, '#dff3ff', 0.3);
+      newColor = blended;
+      reactionNote = `${sourceItem.name} poured into ${targetItem.name}: liquids blended.`;
+    }
+
+    // 4. Apply: target receives & reacts, source is depleted.
     setTableItems((prev) =>
       prev.map((item) => {
         if (item.instanceId === targetItem.instanceId) {
-          const updatedChemicals = [
-            ...(item.contents?.chemicals || []),
-            ...(sourceItem.contents?.chemicals || [{ id: sourceItem.catalogId, name: sourceItem.name, amount: 60, color: sourceItem.contents?.color || '#38bdf8' }]),
-          ];
+          const merged: TableItem['contents'] = {
+            chemicals: mergedChems,
+            temperature: (targetItem.contents?.temperature ?? 22) + tempDelta,
+            color: newColor,
+          };
+          if (hclMl > 0 && naohMl > 0) merged.ph = ph;
+          if (outcomePrecipitate !== undefined) merged.precipitate = outcomePrecipitate;
+          if (outcomeGas !== undefined) merged.gasEvolved = outcomeGas;
+          return { ...item, contents: merged };
+        }
+        if (item.instanceId === sourceItem.instanceId) {
           return {
             ...item,
             contents: {
-              chemicals: updatedChemicals,
-              color: newColor,
+              chemicals: remainingChems,
+              color: remainingChems.length > 0 ? remainingChems[remainingChems.length - 1].color : '#d5dde3',
+              temperature: sourceItem.contents?.temperature ?? 22,
             },
           };
         }
@@ -364,7 +631,7 @@ export default function App() {
     setReactionMessage(reactionNote);
     speak(reactionNote);
 
-    // AI Nova Assistant Step Explanation in real-time
+    // Nova AI explains the reaction in real time.
     askNovaAboutContext(
       `In our virtual chemistry lab, we just mixed ${sourceItem.name} into ${targetItem.name}. Result: ${reactionNote}. Explain the chemical reaction, formula, and what happens step by step.`
     );
@@ -411,22 +678,33 @@ export default function App() {
 
   return (
     <div className="w-full h-screen bg-gray-950 overflow-hidden font-sans select-none">
+      <RemoteBridge />
       <UIOverlay
         mode={mode}
         countdown={countdown}
-        selectedLab={selectedLab}
-        setSelectedLab={setSelectedLab}
+        world={world}
+        onOpenLab={openLab}
+        onBack={backToLabs}
+        droneMode={droneMode}
+        onSelectDroneMode={setDroneMode}
         labMode={labMode}
         setLabMode={handleSetLabMode}
         selectedExperiment={selectedExperiment}
         onSelectExperiment={handleSelectExperiment}
         onStartVR={startVR}
-        novaMessage={novaMessage}
         isListening={isListening}
         voiceError={voiceError}
+        language={language}
+        onLanguageChange={handleLanguageChange}
+        models={availableModels}
+        activeModel={activeModel}
+        onModelChange={handleModelChange}
         onAskNovaGuide={handleAskNovaGuide}
         onResetExperimentEquipment={handleResetExperimentEquipment}
       />
+
+      {mode === 'drone' && <DroneHUD onExit={exitFlight} />}
+      {mode === 'campus' && <CampusHUD onLaunch={launchDrone} onExit={backToLabs} />}
 
       {mode === 'lab' && (
         <TableWorkbenchUI
@@ -447,7 +725,7 @@ export default function App() {
         />
       )}
 
-      {mode === 'lab' && <VRButton />}
+      {(mode === 'lab' || mode === 'drone' || mode === 'campus') && <VRButton />}
 
       <Canvas
         dpr={[1, 1.5]}
@@ -467,23 +745,33 @@ export default function App() {
         }}
       >
         <XR>
-          <LabRoom
-            labMode={labMode}
-            selectedExperiment={selectedExperiment}
-            tableItems={tableItems}
-            selectedTableItemId={selectedTableItemId}
-            onSelectTableItem={setSelectedTableItemId}
-            onOpenRackMenu={(category) => setActiveRackCategory(category)}
-            isHeating={isHeating}
-            pourState={pourState}
-          />
+          {world === 'drone' ? (
+            mode === 'drone' ? (
+              <DroneSim active />
+            ) : (
+              <DroneCampus walk={mode === 'campus'} onLaunch={launchDrone} />
+            )
+          ) : (
+            <>
+              <LabRoom
+                labMode={labMode}
+                selectedExperiment={selectedExperiment}
+                tableItems={tableItems}
+                selectedTableItemId={selectedTableItemId}
+                onSelectTableItem={setSelectedTableItemId}
+                onOpenRackMenu={(category) => setActiveRackCategory(category)}
+                isHeating={isHeating}
+                pourState={pourState}
+              />
 
-          <NovaAssistant message={novaMessage} />
+              <NovaAssistant message={novaMessage} />
+            </>
+          )}
 
           <Controllers />
           <Hands />
 
-          {mode === 'menu' ? (
+          {mode === 'menu' || mode === 'dashboard' ? (
             <OrbitControls
               makeDefault
               minPolarAngle={Math.PI / 4}
@@ -491,8 +779,8 @@ export default function App() {
               autoRotate
               autoRotateSpeed={0.5}
             />
-          ) : (
-            <DesktopController mode={mode} />
+          ) : world === 'drone' ? null : (
+            <DesktopController mode={mode as 'menu' | 'countdown' | 'lab'} />
           )}
         </XR>
       </Canvas>

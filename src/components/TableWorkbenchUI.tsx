@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { InventoryItem, TableItem, LAB_CATALOG } from '../types';
+import { InventoryItem, TableItem, LAB_CATALOG, totalVolume, totalCapacity, fillPercent } from '../types';
 import {
   FlaskConical,
   Flame,
@@ -12,7 +12,6 @@ import {
   MessageSquare,
   Search,
   X,
-  Keyboard,
   ChevronRight,
   ChevronLeft,
   ChevronDown,
@@ -56,7 +55,6 @@ export function TableWorkbenchUI({
 }: TableWorkbenchUIProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceForPour, setSourceForPour] = useState<string | null>(null);
-  const [showKeymapHelp, setShowKeymapHelp] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
   // Filter items in catalog for selected rack category
@@ -170,38 +168,6 @@ export function TableWorkbenchUI({
 
   return (
     <>
-      {/* HUD KEYBOARD SHORTCUTS BANNER (Top Left) */}
-      <div className="fixed top-6 left-6 z-40 pointer-events-auto hidden md:flex flex-col gap-1.5 bg-slate-900/90 border border-slate-800 backdrop-blur-xl p-3.5 rounded-2xl shadow-xl text-xs text-slate-300">
-        <div className="flex items-center gap-2 font-bold text-blue-400 mb-1">
-          <Keyboard className="w-4 h-4" />
-          <span>Quick Hotkeys</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 font-mono font-bold text-[10px]">WASD</kbd>
-          <span className="text-slate-400">Walk in 3D Lab</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 font-mono font-bold text-[10px]">1, 2, 3</kbd>
-          <span className="text-slate-400">Open Catalog Racks</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 font-mono font-bold text-[10px]">Arrow Keys / Tab</kbd>
-          <span className="text-slate-400">Select Elements</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-purple-300 font-mono font-bold text-[10px]">P / M</kbd>
-          <span className="text-slate-400">Pour / Mix Reaction</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-red-400 font-mono font-bold text-[10px]">X / Del</kbd>
-          <span className="text-slate-400">Remove Table Item</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-orange-400 font-mono font-bold text-[10px]">F</kbd>
-          <span className="text-slate-400">Burner Flame</span>
-        </div>
-      </div>
-
       {/* RACK ITEM SELECTION DROPDOWN MODAL */}
       <AnimatePresence>
         {rackCategory && (
@@ -299,87 +265,8 @@ export function TableWorkbenchUI({
         )}
       </AnimatePresence>
 
-      {/* KEYBOARD SHORTCUTS HELP MODAL */}
-      <AnimatePresence>
-        {showKeymapHelp && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md pointer-events-auto"
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl text-white"
-            >
-              <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2 font-black text-lg">
-                  <Keyboard className="w-5 h-5 text-blue-400" />
-                  <span>Keybindings & Controls</span>
-                </div>
-                <button onClick={() => setShowKeymapHelp(false)} className="text-slate-400 hover:text-white">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-2 text-sm text-slate-300">
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Look Around / Rotate Camera</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">Mouse Click & Drag</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Walk inside Lab</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">W / A / S / D</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Open Racks</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">Key 1, 2, 3</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Select Item in Catalog</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">Key 1 - 9</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Cycle Table Item Selection</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">Tab / Q / E</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Remove Selected Item</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-red-300 text-xs font-mono">X / Delete</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Pour / Mix Reaction</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-amber-300 text-xs font-mono">Key P / M</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Toggle Bunsen Burner</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-orange-300 text-xs font-mono">Key F</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Clear Table Workstation</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">Key C</kbd>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="font-semibold text-slate-200">Voice Query with Nova AI</span>
-                  <kbd className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 text-xs font-mono">Hold Spacebar</kbd>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowKeymapHelp(false)}
-                className="w-full mt-6 bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-500 transition-all text-sm"
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* TOP DIRECTORY BAR FOR QUICK RACK KEYBINDINGS */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-800 backdrop-blur-xl px-4 py-2 rounded-full shadow-xl">
+      {/* TOP DIRECTORY BAR FOR QUICK RACK SELECTION */}
+      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-800 backdrop-blur-xl px-4 py-2 rounded-full shadow-xl">
         <button
           onClick={() => onOpenRackMenu('glassware')}
           className="px-3 py-1.5 rounded-full text-xs font-bold text-sky-400 bg-sky-950/60 border border-sky-500/30 hover:bg-sky-600 hover:text-white transition-all flex items-center gap-1.5"
@@ -403,20 +290,10 @@ export function TableWorkbenchUI({
           <span className="bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded text-[10px] font-mono">3</span>
           <span>Fire & Tools</span>
         </button>
-
-        <div className="w-px h-4 bg-slate-700 mx-1" />
-
-        <button
-          onClick={() => setShowKeymapHelp(true)}
-          className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-          title="View Keybindings"
-        >
-          <Keyboard className="w-4 h-4" />
-        </button>
       </div>
 
       {/* WORKBENCH BOTTOM CONTROL PANEL */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex flex-col items-center gap-2 max-w-4xl w-full px-4">
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex flex-col items-center gap-2 max-w-2xl w-full px-3">
         {/* Chemical Reaction Banner Toast */}
         <AnimatePresence>
           {reactionMessage && (
@@ -521,12 +398,12 @@ export function TableWorkbenchUI({
           </motion.div>
         ) : (
           /* EXPANDED WORKBENCH DOCK WITH COLLAPSE BUTTON */
-          <div className="bg-slate-900/95 border border-slate-800 backdrop-blur-xl rounded-3xl p-3.5 shadow-2xl w-full flex flex-col gap-2.5 relative">
+          <div className="bg-slate-900/95 border border-slate-800 backdrop-blur-xl rounded-2xl p-2.5 shadow-2xl w-full flex flex-col gap-2 relative">
             {/* Top Bar: Table Items Quick Selector Pills + Minimize Button */}
-            <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
-              <div className="flex items-center gap-1.5 overflow-x-auto max-w-xl py-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-                  <FlaskConical className="w-3.5 h-3.5 text-sky-400" />
+            <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-1.5">
+              <div className="flex items-center gap-1 overflow-x-auto max-w-sm py-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                  <FlaskConical className="w-3 h-3 text-sky-400" />
                   Table ({tableItems.length}):
                 </span>
 
@@ -538,7 +415,7 @@ export function TableWorkbenchUI({
                     <button
                       key={item.instanceId}
                       onClick={() => onSelectTableItem(isSelected ? null : item.instanceId)}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1 border ${
+                      className={`px-2 py-0.5 rounded-lg text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 border ${
                         isSelected
                           ? 'bg-blue-600 text-white border-blue-400 shadow-md'
                           : isSource
@@ -549,7 +426,7 @@ export function TableWorkbenchUI({
                       <span>{item.name.split(' ')[0]}</span>
                       {item.contents?.color && (
                         <span
-                          className="w-2.5 h-2.5 rounded-full border border-white/20"
+                          className="w-2 h-2 rounded-full border border-white/20"
                           style={{ backgroundColor: item.contents.color }}
                         />
                       )}
@@ -610,7 +487,7 @@ export function TableWorkbenchUI({
                     <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                       <span className="flex items-center gap-1 text-slate-300 font-medium">
                         <Thermometer className="w-3 h-3 text-orange-400" />
-                        {selectedItem.contents?.temperature ?? 22}°C
+                        {((selectedItem.contents?.temperature ?? 22)).toFixed(1)}°C
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1 text-slate-300 font-medium">
@@ -626,7 +503,23 @@ export function TableWorkbenchUI({
                   <div className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1 flex items-center justify-between">
                     <span>Chemical Composition ({selectedItem.contents?.chemicals?.length || 0})</span>
                     <span className="text-[9px] text-sky-400 font-mono">
-                      Vol: {selectedItem.contents?.chemicals?.reduce((acc, c) => acc + c.amount, 0) || 0} mL
+                      Vol: {totalVolume(selectedItem)} / {totalCapacity(selectedItem)} mL
+                    </span>
+                  </div>
+
+                  {/* Realistic liquid fill level bar */}
+                  <div className="mb-1.5 flex items-center gap-1.5">
+                    <div className="flex-1 h-1.5 bg-slate-700/70 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.round(fillPercent(selectedItem) * 100)}%`,
+                          background: selectedItem.contents?.color || '#38bdf8',
+                        }}
+                      />
+                    </div>
+                    <span className="text-[9px] font-mono font-bold text-slate-400">
+                      {Math.round(fillPercent(selectedItem) * 100)}%
                     </span>
                   </div>
 
