@@ -1,0 +1,6 @@
+{
+  "name": "VR Chemistry Lab",
+  "description": "An interactive 3D Virtual Reality chemistry lab with an AI assistant named Nova to guide students through experiments.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
