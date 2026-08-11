@@ -35,6 +35,8 @@ interface TableWorkbenchUIProps {
   onAskNovaAboutTable: () => void;
   reactionMessage: string | null;
   onOpenRackMenu: (category: 'glassware' | 'chemicals' | 'equipment') => void;
+  immersive?: boolean;
+  speak?: (text: string) => void;
 }
 
 export function TableWorkbenchUI({
@@ -52,6 +54,8 @@ export function TableWorkbenchUI({
   onAskNovaAboutTable,
   reactionMessage,
   onOpenRackMenu,
+  immersive = false,
+  speak,
 }: TableWorkbenchUIProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceForPour, setSourceForPour] = useState<string | null>(null);
@@ -67,6 +71,19 @@ export function TableWorkbenchUI({
   });
 
   const selectedItem = tableItems.find((i) => i.instanceId === selectedTableItemId);
+
+  // In the VR headset the phone screen only shows the 3D scene, so when a rack
+  // opens we read the numbered item list aloud — the student hears exactly
+  // which digit places which piece of glassware/chemical/equipment.
+  useEffect(() => {
+    if (!immersive || !rackCategory || !speak) return;
+    const names = activeCatalogItems
+      .slice(0, 6)
+      .map((it, i) => `${i + 1} for ${it.name}`)
+      .join(', ');
+    speak(`${rackCategory} rack open. Press number. ${names}.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [immersive, rackCategory, speak]);
 
   const handlePourAction = (targetInstanceId: string) => {
     if (sourceForPour && sourceForPour !== targetInstanceId) {
@@ -181,7 +198,9 @@ export function TableWorkbenchUI({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[85vh]"
+              className={`bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh] ${
+                immersive ? 'max-w-4xl w-full' : 'max-w-2xl w-full'
+              }`}
             >
               {/* Header */}
               <div className="flex justify-between items-center pb-4 border-b border-slate-800">
@@ -195,8 +214,8 @@ export function TableWorkbenchUI({
                     <h2 className="text-xl font-black text-white capitalize">
                       {rackCategory} Catalog
                     </h2>
-                    <p className="text-xs text-slate-400">
-                      Press <kbd className="px-1.5 py-0.5 bg-slate-800 text-blue-300 rounded font-mono font-bold">1-9</kbd> or click to place item onto Central Workstation
+                    <p className={`text-slate-400 ${immersive ? 'text-sm text-yellow-300/90 font-semibold' : 'text-xs'}`}>
+                      Press <kbd className="px-1.5 py-0.5 bg-slate-800 text-blue-300 rounded font-mono font-bold">1-9</kbd> to place item onto Central Workstation
                     </p>
                   </div>
                 </div>
@@ -209,19 +228,21 @@ export function TableWorkbenchUI({
               </div>
 
               {/* Search Bar */}
-              <div className="my-4 relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search chemicals or apparatus (e.g. HCl, Beaker, Burner)..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-              </div>
+              {!immersive && (
+                <div className="my-4 relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search chemicals or apparatus (e.g. HCl, Beaker, Burner)..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-slate-800/80 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
 
               {/* Items Grid with Number Badges */}
-              <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 gap-3 my-2">
+              <div className={`flex-1 overflow-y-auto pr-2 grid gap-3 my-2 ${immersive ? 'grid-cols-1 sm:grid-cols-2 text-lg' : 'grid-cols-1 sm:grid-cols-2'}`}>
                 {activeCatalogItems.map((catalogItem, idx) => (
                   <div
                     key={catalogItem.id}
@@ -229,27 +250,27 @@ export function TableWorkbenchUI({
                       onAddItemToTable(catalogItem);
                       onCloseRackMenu();
                     }}
-                    className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/60 hover:border-blue-500/80 hover:bg-slate-800 cursor-pointer transition-all flex items-center justify-between group relative"
+                    className={`p-4 rounded-2xl bg-slate-800/50 border border-slate-700/60 hover:border-blue-500/80 hover:bg-slate-800 cursor-pointer transition-all flex items-center justify-between group relative ${immersive ? 'py-5' : ''}`}
                   >
                     <div className="flex items-center gap-3">
                       {/* Number Key Trigger Badge */}
                       {idx < 9 && (
-                        <div className="w-6 h-6 rounded-md bg-blue-600/30 border border-blue-400/50 text-blue-300 font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                        <div className={`rounded-md bg-blue-600/30 border border-blue-400/50 text-blue-300 font-mono font-bold flex items-center justify-center shrink-0 ${immersive ? 'w-9 h-9 text-lg' : 'w-6 h-6 text-xs'}`}>
                           {idx + 1}
                         </div>
                       )}
 
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                        className={`rounded-lg flex items-center justify-center text-white font-bold shrink-0 ${immersive ? 'w-12 h-12 text-sm' : 'w-8 h-8 text-xs'}`}
                         style={{ backgroundColor: catalogItem.color || '#3b82f6' }}
                       >
                         {catalogItem.formula || catalogItem.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
+                        <div className={`font-bold text-white group-hover:text-blue-400 transition-colors ${immersive ? 'text-lg' : 'text-sm'}`}>
                           {catalogItem.name}
                         </div>
-                        <div className="text-[10px] text-slate-400 capitalize">
+                        <div className={`text-slate-400 capitalize ${immersive ? 'text-sm' : 'text-[10px]'}`}>
                           {catalogItem.category} • {catalogItem.type}
                         </div>
                       </div>
@@ -265,8 +286,9 @@ export function TableWorkbenchUI({
         )}
       </AnimatePresence>
 
-      {/* TOP DIRECTORY BAR FOR QUICK RACK SELECTION */}
-      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-800 backdrop-blur-xl px-4 py-2 rounded-full shadow-xl">
+      {/* TOP DIRECTORY BAR FOR QUICK RACK SELECTION (hidden in the VR headset) */}
+      {!immersive && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-2 bg-slate-900/90 border border-slate-800 backdrop-blur-xl px-4 py-2 rounded-full shadow-xl">
         <button
           onClick={() => onOpenRackMenu('glassware')}
           className="px-3 py-1.5 rounded-full text-xs font-bold text-sky-400 bg-sky-950/60 border border-sky-500/30 hover:bg-sky-600 hover:text-white transition-all flex items-center gap-1.5"
@@ -291,8 +313,10 @@ export function TableWorkbenchUI({
           <span className="hidden min-[460px]:inline">Fire & Tools</span>
         </button>
       </div>
+      )}
 
-      {/* WORKBENCH BOTTOM CONTROL PANEL */}
+      {/* WORKBENCH BOTTOM CONTROL PANEL (hidden in the VR headset) */}
+      {!immersive && (
       <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex flex-col items-center gap-2 max-w-2xl w-full px-3">
         {/* Chemical Reaction Banner Toast */}
         <AnimatePresence>
@@ -677,6 +701,7 @@ export function TableWorkbenchUI({
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

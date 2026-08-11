@@ -388,15 +388,15 @@ export default function App() {
 
       // Key 1: Glassware
       if (e.code === 'Digit1' || e.code === 'Numpad1') {
-        setActiveRackCategory('glassware');
+        setActiveRackCategory((prev) => (prev ? prev : 'glassware'));
       }
       // Key 2: Chemicals
       else if (e.code === 'Digit2' || e.code === 'Numpad2') {
-        setActiveRackCategory('chemicals');
+        setActiveRackCategory((prev) => (prev ? prev : 'chemicals'));
       }
       // Key 3: Equipment
       else if (e.code === 'Digit3' || e.code === 'Numpad3') {
-        setActiveRackCategory('equipment');
+        setActiveRackCategory((prev) => (prev ? prev : 'equipment'));
       }
       // Key F: Toggle Bunsen Burner
       else if (e.code === 'KeyF') {
@@ -933,7 +933,7 @@ export default function App() {
         />
       )}
 
-      {mode === 'lab' && !immersive && (
+      {mode === 'lab' && (
         <TableWorkbenchUI
           rackCategory={activeRackCategory}
           onCloseRackMenu={() => setActiveRackCategory(null)}
@@ -949,6 +949,8 @@ export default function App() {
           onToggleHeating={() => setIsHeating(!isHeating)}
           onAskNovaAboutTable={handleAskNovaAboutTable}
           reactionMessage={reactionMessage}
+          immersive={immersive}
+          speak={speak}
         />
       )}
 
