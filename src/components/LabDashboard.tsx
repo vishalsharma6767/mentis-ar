@@ -1,40 +1,16 @@
 import { motion } from 'framer-motion';
-import { FlaskConical, Activity, Play, ChevronLeft, ChevronRight, Target, Trophy, Cloud, ShieldCheck, Keyboard, Building2 } from 'lucide-react';
+import { FlaskConical, Orbit, Play, ChevronLeft, ChevronRight, ShieldCheck, Keyboard, Hand, Camera, Volume2, Sparkles } from 'lucide-react';
 import { Experiment, EXPERIMENTS } from '../types';
-import { DroneMode, modeLabel } from '../drone/droneModes';
 
 interface LabDashboardProps {
-  world: 'chemistry' | 'drone';
+  world: 'chemistry' | 'solar';
   labMode: 'guided' | 'sandbox';
   setLabMode: (mode: 'guided' | 'sandbox') => void;
   selectedExperiment: Experiment | null;
   onSelectExperiment: (exp: Experiment) => void;
-  droneMode: DroneMode;
-  onSelectDroneMode: (mode: DroneMode) => void;
   onStartVR: () => void;
   onBack: () => void;
 }
-
-const DRONE_MODES = [
-  {
-    id: 'free' as DroneMode,
-    icon: Cloud,
-    title: 'Free Flight',
-    desc: 'Practice takeoff, hover, turns and landing over the desert field at your own pace.',
-  },
-  {
-    id: 'race' as DroneMode,
-    icon: Trophy,
-    title: 'Obstacle Race',
-    desc: 'Fly FPV through 7 realistic gates as fast as you can. Timer + best time tracking.',
-  },
-  {
-    id: 'mission' as DroneMode,
-    icon: Target,
-    title: 'Mission Training',
-    desc: 'Deliver the package to every helipad by landing on it to complete the mission.',
-  },
-];
 
 export function LabDashboard({
   world,
@@ -42,12 +18,10 @@ export function LabDashboard({
   setLabMode,
   selectedExperiment,
   onSelectExperiment,
-  droneMode,
-  onSelectDroneMode,
   onStartVR,
   onBack,
 }: LabDashboardProps) {
-  const isDrone = world === 'drone';
+  const isSolar = world === 'solar';
 
   return (
     <motion.div
@@ -68,8 +42,8 @@ export function LabDashboard({
             </button>
             <span
               className={`text-[10px] font-black tracking-widest uppercase px-3 py-1.5 rounded-full border ${
-                isDrone
-                  ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
+                isSolar
+                  ? 'text-indigo-300 border-indigo-500/40 bg-indigo-500/10'
                   : 'text-blue-300 border-blue-500/40 bg-blue-500/10'
               }`}
             >
@@ -81,18 +55,18 @@ export function LabDashboard({
           <div className="flex items-center gap-5">
             <div
               className={`w-16 h-16 rounded-3xl flex items-center justify-center shrink-0 ${
-                isDrone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'
+                isSolar ? 'bg-indigo-500/20 text-indigo-400' : 'bg-blue-500/20 text-blue-400'
               }`}
             >
-              {isDrone ? <Activity className="w-8 h-8" /> : <FlaskConical className="w-8 h-8" />}
+              {isSolar ? <Orbit className="w-8 h-8" /> : <FlaskConical className="w-8 h-8" />}
             </div>
             <div>
               <h2 className="text-3xl font-black text-white">
-                {isDrone ? 'Drone Flight Academy' : 'Chemistry Lab'}
+                {isSolar ? 'Solar System Academy' : 'Chemistry Lab'}
               </h2>
               <p className="text-sm text-slate-400">
-                {isDrone
-                  ? 'Realistic desert flight training · FPV cameras · live telemetry'
+                {isSolar
+                  ? 'Mixed reality · AI voice astronomy · hand tracking'
                   : 'Guided experiments · realistic reactions · open sandbox'}
               </p>
             </div>
@@ -103,17 +77,18 @@ export function LabDashboard({
             <div className="space-y-5">
               <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-6 space-y-4">
                 <h3 className="font-black text-white text-lg tracking-wide">Overview</h3>
-                {isDrone ? (
+                {isSolar ? (
                   <>
                     <p className="text-[13px] text-slate-300 leading-relaxed">
-                      Walk a full desert drone academy — HQ, hangars, control tower, solar farm and display wing —
-                      then launch your quad from the flight terminal. The drone obeys true physics — gravity,
-                      thrust, tilt, drag and battery — with live FPV OSD and chase or orbit cameras.
+                      Put your phone in the VR headset and the camera opens — the Sun, all eight planets and the
+                      Moon float over your real room. Look with the reticle, pinch in front of the camera to grab
+                      a planet and drag it around, pinch with two hands to zoom. Nova teaches you about every
+                      planet by voice, in English or Hindi.
                     </p>
                     <ul className="space-y-2 text-[12px] text-slate-300">
-                      <li className="flex items-center gap-2"><Building2 className="w-4 h-4 text-emerald-400 shrink-0" /> Explore a walkable academy campus before flying</li>
-                      <li className="flex items-center gap-2"><Trophy className="w-4 h-4 text-emerald-400 shrink-0" /> Track your best race time</li>
-                      <li className="flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-400 shrink-0" /> Live altitude, speed, heading, battery & throttle</li>
+                      <li className="flex items-center gap-2"><Camera className="w-4 h-4 text-indigo-400 shrink-0" /> Mixed-reality camera passthrough (works in the headset)</li>
+                      <li className="flex items-center gap-2"><Hand className="w-4 h-4 text-emerald-400 shrink-0" /> Pinch to grab, drag & rotate planets by hand</li>
+                      <li className="flex items-center gap-2"><Volume2 className="w-4 h-4 text-amber-400 shrink-0" /> Ask Nova anything — “tell me about Saturn”</li>
                     </ul>
                   </>
                 ) : (
@@ -125,7 +100,7 @@ export function LabDashboard({
                     </p>
                     <ul className="space-y-2 text-[12px] text-slate-300">
                       <li className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" /> Complete safety — no real hazards</li>
-                      <li className="flex items-center gap-2"><Activity className="w-4 h-4 text-blue-400 shrink-0" /> Reagents, neutralization & reactions</li>
+                      <li className="flex items-center gap-2"><FlaskConical className="w-4 h-4 text-blue-400 shrink-0" /> Reagents, neutralization & reactions</li>
                       <li className="flex items-center gap-2"><Keyboard className="w-4 h-4 text-blue-400 shrink-0" /> Full keyboard & voice control</li>
                     </ul>
                   </>
@@ -135,19 +110,16 @@ export function LabDashboard({
               {/* Controls */}
               <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-6 space-y-3">
                 <h3 className="font-black text-white text-base tracking-wide">Controls</h3>
-                {isDrone ? (
+                {isSolar ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] text-slate-400 font-mono">
-                    <span>WASD — walk the academy</span>
-                    <span>Drag — look around</span>
-                    <span>E — launch drone at terminal</span>
-                    <span>W / S — throttle up / down</span>
-                    <span>↑ ↓ — pitch forward / back</span>
-                    <span>← → — roll left / right</span>
-                    <span>A / D — yaw left / right</span>
-                    <span>Shift — turbo boost</span>
-                    <span>Space — takeoff / land</span>
-                    <span>R — reset &nbsp;·&nbsp; M — mode</span>
-                    <span>C — camera (FPV / chase / orbit)</span>
+                    <span>Reticle (centre) — look to select</span>
+                    <span>Pinch — grab & drag planet</span>
+                    <span>Two-hand pinch — zoom in / out</span>
+                    <span>Space — talk to Nova</span>
+                    <span>C — camera on / off</span>
+                    <span>R — reset planets</span>
+                    <span>Drag — rotate model (out of headset)</span>
+                    <span>Scroll — zoom (out of headset)</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] text-slate-400 font-mono">
@@ -160,8 +132,8 @@ export function LabDashboard({
                   </div>
                 )}
                 <p className="text-[10px] text-slate-500">
-                  {isDrone
-                    ? 'Works with keyboard, Bluetooth/USB gamepad, or the phone controller (QR bottom-left). VR headset supported when connected.'
+                  {isSolar
+                    ? 'Best with the phone in your VR headset — the camera shows your room. Hand tracking also works with the phone out of the headset.'
                     : 'VR headset supported when connected.'}
                 </p>
               </div>
@@ -170,39 +142,34 @@ export function LabDashboard({
             {/* Right: setup */}
             <div
               className={`bg-slate-900/60 border rounded-3xl p-6 space-y-5 ${
-                isDrone ? 'border-emerald-500/25' : 'border-blue-500/25'
+                isSolar ? 'border-indigo-500/25' : 'border-blue-500/25'
               }`}
             >
-              <h3 className="font-black text-white text-lg tracking-wide">
-                {isDrone ? 'Choose Training Mode' : 'Choose Protocol'}
-              </h3>
-
-              {isDrone ? (
-                <div className="space-y-3">
-                  {DRONE_MODES.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => onSelectDroneMode(m.id)}
-                      className={`w-full p-4 rounded-2xl border text-left transition-all flex items-start gap-3 ${
-                        droneMode === m.id
-                          ? 'bg-emerald-600/20 border-emerald-400 ring-2 ring-emerald-500/40'
-                          : 'bg-white/5 border-white/10 hover:border-white/25'
-                      }`}
-                    >
-                      <m.icon className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-white text-sm">{m.title}</span>
-                          <span className="text-[10px] font-black text-emerald-400 uppercase">{modeLabel(m.id)}</span>
+              {isSolar ? (
+                <>
+                  <div className="space-y-3">
+                    <h3 className="font-black text-white text-lg tracking-wide">What you will see</h3>
+                    {[
+                      { icon: Sparkles, title: 'The Sun & 8 planets + the Moon', desc: 'A true-to-order model of the solar system floating in your room, with orbiting motion.' },
+                      { icon: Hand, title: 'Grab by hand', desc: 'Pinch in front of the camera to pick up a planet, then move it around the room.' },
+                      { icon: Volume2, title: 'Nova teaches by voice', desc: 'Say a planet name and Nova tells you its story — in English or Hindi (हिंदी).' },
+                    ].map((m) => (
+                      <div
+                        key={m.title}
+                        className="w-full p-4 rounded-2xl border border-white/10 bg-white/5 text-left flex items-start gap-3"
+                      >
+                        <m.icon className="w-5 h-5 text-indigo-400 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <div className="font-bold text-white text-sm">{m.title}</div>
+                          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{m.desc}</p>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{m.desc}</p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-500 mt-1 shrink-0" />
-                    </button>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <>
+                  <h3 className="font-black text-white text-lg tracking-wide">Choose Protocol</h3>
                   <div className="flex bg-slate-800/80 rounded-xl p-1 w-full">
                     <button
                       onClick={() => setLabMode('guided')}
@@ -261,12 +228,12 @@ export function LabDashboard({
               <button
                 onClick={onStartVR}
                 className={`w-full text-white font-black py-5 rounded-2xl uppercase tracking-widest text-base transition-all flex justify-center items-center gap-3 border shadow-[0_0_30px_rgba(37,99,235,0.3)] ${
-                  isDrone
-                    ? 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)] border-emerald-400/40'
+                  isSolar
+                    ? 'bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.4)] border-indigo-400/40'
                     : 'bg-blue-600 hover:bg-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)] border-blue-400/40'
                 }`}
               >
-                <Play className="w-5 h-5 fill-current" /> {isDrone ? 'ENTER DRONE ACADEMY' : 'ENTER CHEMISTRY LAB'}
+                <Play className="w-5 h-5 fill-current" /> {isSolar ? 'ENTER SOLAR SYSTEM ACADEMY' : 'ENTER CHEMISTRY LAB'}
               </button>
             </div>
           </div>

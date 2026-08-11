@@ -121,26 +121,30 @@ export function getModel(id: string | undefined): RouterModel | null {
 // ---------- Language-aware system prompts ----------
 
 export function systemPromptFor(language: Language, experiment: string | undefined): string {
-  const base =
-    'You are Nova, an expert AI Chemistry Lab Assistant inside a 3D Virtual Chemistry Lab for school students. ' +
-    `Current experiment: ${experiment || 'None selected / Sandbox Mode'}. ` +
-    'Respond in PLAIN TEXT ONLY - never use markdown symbols (#, *, _, $, bullet lists), because your answer is read aloud by a text-to-speech voice. Keep answers short and encouraging.';
+  const isSolar = experiment === 'Solar System Academy';
+  const base = isSolar
+    ? 'You are Nova, an expert AI Astronomy Teacher inside a Mixed-Reality Solar System Academy for school students. ' +
+      'The student can see the Sun, the eight planets and the Moon floating around them, and can grab, drag and rotate them. ' +
+      'Current lesson: Solar System Academy. ' +
+      'Respond in PLAIN TEXT ONLY - never use markdown symbols (#, *, _, $, bullet lists), because your answer is read aloud by a text-to-speech voice. Keep answers short and encouraging.'
+    : 'You are Nova, an expert AI Chemistry Lab Assistant inside a 3D Virtual Chemistry Lab for school students. ' +
+      `Current experiment: ${experiment || 'None selected / Sandbox Mode'}. ` +
+      'Respond in PLAIN TEXT ONLY - never use markdown symbols (#, *, _, $, bullet lists), because your answer is read aloud by a text-to-speech voice. Keep answers short and encouraging.';
 
   if (language === 'hi-IN') {
     return (
       base +
-      '\nLANGUAGE: You MUST reply in HINGLISH - exactly like a friendly Indian Chemistry teacher (Guruji) speaking to students. Rules:\n' +
-      '1. Scientific and chemical terms stay in English: e.g. "Hydrochloric Acid", "Sodium Hydroxide", "precipitate", "pH", "reaction", "Oxygen gas".\n' +
-      '2. All explanation and instruction words are written in HINDI using DEVANAGARI script, e.g. "अब बीकर में थोड़ा-थोड़ा मिलाओ", "नीला अवक्षेप बनता है", "याद रखो बच्चों".\n' +
+      '\nLANGUAGE: You MUST reply in HINGLISH - exactly like a friendly Indian teacher (Guruji) speaking to students. Rules:\n' +
+      '1. Scientific terms stay in English: e.g. "Sun", "planet", "orbit", "gravity", "precipitate", "pH", "reaction", "Oxygen gas".\n' +
+      '2. All explanation and instruction words are written in HINDI using DEVANAGARI script, e.g. "देखो बच्चों, बुध सूर्य के सबसे पास है", "याद रखो".\n' +
       '3. Use warm Indian-teacher phrases like "देखो बच्चों", "याद रखो", "समझ गए न?".\n' +
-      '4. Scientific terms must remain English (never translate terms like "beaker", "precipitate"), the rest in Devanagari Hindi.\n' +
-      '5. Keep it to 2-4 short sentences. Speak naturally like a Hindi-medium school teacher.'
+      '4. Keep it to 2-4 short sentences. Speak naturally like a Hindi-medium school teacher.'
     );
   }
 
   return (
     base +
-    '\nLANGUAGE: Speak in clear, warm British English (UK). Use correct chemistry terminology and state symbols like (s), (l), (g), (aq) when useful. Keep it to 1-3 short sentences.'
+    '\nLANGUAGE: Speak in clear, warm British English (UK). Use correct terminology. Keep it to 1-3 short sentences.'
   );
 }
 
@@ -258,6 +262,78 @@ const has = (msg: string, ...needles: string[]) => needles.some((n) => msg.toLow
 function localTutor(message: string, experiment: string | undefined, language: Language): string {
   const msg = message.toLowerCase();
 
+  // ----- Solar System Academy (offline astronomy tutor) -----
+  if (experiment === 'Solar System Academy') {
+    const facts: Record<string, { en: string; hi: string }> = {
+      sun: {
+        en: 'The Sun is a star at the centre of our solar system, a giant ball of hot glowing gas. About one point three million Earths could fit inside it, and it gives us the light and heat that make life possible.',
+        hi: 'सूर्य हमारे सौरमंडल के केंद्र में एक तारा है — गर्म चमकती गैस का विशाल गोला। इसमें लगभग 1.3 मिलियन पृथ्वी समा सकती हैं, और यही हमें प्रकाश और गर्मी देता है।',
+      },
+      mercury: {
+        en: 'Mercury is the smallest planet and the closest to the Sun. A year on Mercury is only 88 Earth days, and its surface is covered with craters.',
+        hi: 'बुध सबसे छोटा ग्रह है और सूर्य के सबसे पास। बुध पर एक साल सिर्फ 88 धरती दिन का होता है।',
+      },
+      venus: {
+        en: 'Venus is the hottest planet, with a thick carbon dioxide atmosphere that traps heat like a blanket. It spins backwards compared to most planets.',
+        hi: 'शुक्र सबसे गर्म ग्रह है। Carbon dioxide का घना वातावरण गर्मी को कंबल की तरह फँसा लेता है।',
+      },
+      earth: {
+        en: 'Earth is our home, the third planet from the Sun. It is the only planet known to have liquid water and life, and it has one natural satellite, the Moon.',
+        hi: 'पृथ्वी हमारा घर है, सूर्य से तीसरा ग्रह। यही एकमात्र ग्रह है जहाँ पानी और जीवन है।',
+      },
+      mars: {
+        en: 'Mars is the red planet, coloured by iron oxide, or rust, on its surface. It has the tallest volcano in the solar system, Olympus Mons.',
+        hi: 'मंगल लाल ग्रह है — लोहे के ऑक्साइड यानी जंग की वजह से। यहाँ सौरमंडल का सबसे ऊँचा ज्वालामुखी, Olympus Mons है।',
+      },
+      jupiter: {
+        en: 'Jupiter is the largest planet, a gas giant more massive than all the other planets combined. The Great Red Spot is a storm bigger than Earth.',
+        hi: 'बृहस्पति सबसे बड़ा ग्रह है, इतना बड़ा कि बाकी सब ग्रह मिलकर भी इससे हल्के हैं। Great Red Spot एक तूफान है जो पृथ्वी से बड़ा है।',
+      },
+      saturn: {
+        en: 'Saturn is famous for its rings, made of ice and rock. It is a gas giant so light that it could float on water.',
+        hi: 'शनि अपने छल्लों के लिए प्रसिद्ध है, जो बर्फ और पत्थर के बने हैं। यह इतना हल्का है कि पानी पर तैर सकता है।',
+      },
+      uranus: {
+        en: 'Uranus is an ice giant that spins on its side, rolling around the Sun like a ball. Methane gas gives it its blue-green colour.',
+        hi: 'अरुण एक ice giant है जो करवट लेकर घूमता है। Methane gas इसे नीला-हरा रंग देती है।',
+      },
+      neptune: {
+        en: 'Neptune is the windiest planet, with supersonic winds faster than sound. It is a deep blue ice giant, the farthest planet from the Sun.',
+        hi: 'वरुण सबसे हवादार ग्रह है — यहाँ की हवाएँ ध्वनि से भी तेज़ हैं। यह सूर्य से सबसे दूर वाला नीला ice giant है।',
+      },
+      moon: {
+        en: 'The Moon is Earth\'s natural satellite. It orbits Earth in about 27 days, and its gravity pulls on the oceans to create the tides.',
+        hi: 'चाँद पृथ्वी का प्राकृतिक उपग्रह है। यह 27 दिन में पृथ्वी का चक्कर लगाता है और इसका गुरुत्वाकर्षण ही ज्वार-भाटे बनाता है।',
+      },
+    };
+
+    for (const [id, f] of Object.entries(facts)) {
+      if (has(msg, id)) {
+        return language === 'hi-IN' ? f.hi : f.en;
+      }
+    }
+
+    if (has(msg, 'planet')) {
+      return language === 'hi-IN'
+        ? 'सूर्य से दूरी के क्रम में ग्रह हैं: बुध, शुक्र, पृथ्वी, मंगल, बृहस्पति, शनि, अरुण, वरुण। याद रखने का आसान तरीका: My Very Educated Mother Just Served Us Noodles — Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune!'
+        : 'The planets in order from the Sun are Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus and Neptune. A handy memory trick: My Very Educated Mother Just Served Us Noodles!';
+    }
+    if (has(msg, 'orbit') || has(msg, 'gravity') || has(msg, 'why')) {
+      return language === 'hi-IN'
+        ? 'ग्रह सूर्य के चारों ओर इसलिए घूमते हैं क्योंकि सूर्य का गुरुत्वाकर्षण उन्हें अपनी ओर खींचता है, और उनकी गति उन्हें भागने से रोकती है। यही संतुलन orbit का रहस्य है।'
+        : 'Planets orbit the Sun because the Sun\'s gravity pulls on them, and their forward motion balances that pull — that balance is what keeps them circling, just like a ball swung on a string.';
+    }
+    if (has(msg, 'life')) {
+      return language === 'hi-IN'
+        ? 'जीवन के लिए liquid water, उचित तापमान और atmosphere ज़रूरी है — यही कारण है कि अभी केवल पृथ्वी पर जीवन ज्ञात है।'
+        : 'For life we need liquid water, a suitable temperature and an atmosphere. Right now Earth is the only planet we know that has all three.';
+    }
+    return language === 'hi-IN'
+      ? 'देखो बच्चों, अपने रेटिकल से किसी ग्रह को देखो और उसका नाम बोलो, जैसे "show Jupiter" या "tell me about Mars"। आप पूछ सकते हो कि सबसे बड़ा ग्रह कौन सा है, या चाँद कैसे बना।'
+      : 'Look at a planet with your reticle and say its name, like "show Jupiter" or "tell me about Mars". You can ask me which planet is biggest, why planets orbit the Sun, or how the Moon was formed.';
+  }
+
+  // ----- Chemistry Lab (offline tutor) -----
   if (has(msg, 'acid-base', 'acid base', 'neutralis', 'neutraliz', 'titration', 'hydrochloric', 'phenolphthalein')) {
     return language === 'hi-IN'
       ? 'देखो बच्चों, jab हम Hydrochloric Acid को Sodium Hydroxide के साथ मिलाते हैं तो Neutralisation reaction होती है। Acid और Base मिलकर Salt और Water बनाते हैं। Phenolphthalein indicator acid में colourless रहता है, पर जैसे ही Base ज़्यादा होता है, solution vibrant MAGENTA PINK हो जाता है! यही हमारा Endpoint है, समझ गए न?'

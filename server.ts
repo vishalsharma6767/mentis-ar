@@ -41,9 +41,8 @@ app.get("/api/nova/models", (_req, res) => {
 });
 
 app.post("/api/nova/chat", async (req, res) => {
+  const { message, experiment, model, language } = req.body || {};
   try {
-    const { message, experiment, model, language } = req.body || {};
-
     const selected = getModel(model);
     const result = await routeChat({
       message,
@@ -60,7 +59,10 @@ app.post("/api/nova/chat", async (req, res) => {
   } catch (error: any) {
     console.error("Nova API Error:", error);
     res.json({
-      text: "I am observing your chemical workstation. Select an item or pour chemicals to perform your reaction!",
+      text:
+        experiment === "Solar System Academy"
+          ? "I am gazing at the planets with you. Ask me about any planet, orbit, or the Sun, and I will teach you!"
+          : "I am observing your chemical workstation. Select an item or pour chemicals to perform your reaction!",
       model: null,
     });
   }

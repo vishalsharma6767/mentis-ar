@@ -8,21 +8,20 @@ import { UIOverlay } from './components/UIOverlay';
 import { DesktopController } from './components/DesktopController';
 import { TableWorkbenchUI } from './components/TableWorkbenchUI';
 import { RemoteBridge } from './remote/RemoteBridge';
-import { DroneSim } from './drone/DroneSim';
-import { DroneHUD } from './drone/DroneHUD';
-import { droneCmd, droneState } from './drone/droneState';
-import { DroneCampus, CAMPUS_SPAWN } from './world/DroneCampus';
-import { CampusHUD } from './world/CampusHUD';
-import type { DroneMode } from './drone/droneModes';
+import { SolarSystem } from './solar/SolarSystem';
+import { AcademyHUD } from './solar/AcademyHUD';
+import { MRCamera } from './solar/MRCamera';
+import { solarState, solarCmd, resetPlanets } from './solar/solarState';
+import { parseSolarCommand } from './solar/solarCommands';
 import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage } from './types';
 import { useVoice } from './hooks/useVoice';
 
 export default function App() {
-  const [mode, setMode] = useState<'menu' | 'dashboard' | 'countdown' | 'lab' | 'drone' | 'campus'>('menu');
+  const [mode, setMode] = useState<'menu' | 'dashboard' | 'countdown' | 'lab' | 'solar'>('menu');
   const [countdown, setCountdown] = useState(5);
 
-  const [world, setWorld] = useState<'chemistry' | 'drone'>('chemistry');
-  const [droneMode, setDroneMode] = useState<DroneMode>('free');
+  const [world, setWorld] = useState<'chemistry' | 'solar'>('chemistry');
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [labMode, setLabMode] = useState<'guided' | 'sandbox'>('guided');
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(EXPERIMENTS[0]);
 
@@ -61,9 +60,26 @@ export default function App() {
 
   const handleUserSpeech = useCallback(
     (text: string) => {
+      // In the Solar Academy, first try direct interactive commands (select,
+      // spin, scale, facts) so the planets react instantly to speech.
+      if (world === 'solar' && mode === 'solar') {
+        const result = parseSolarCommand(text);
+        if (result.applied) {
+          if (result.text) {
+            setNovaMessage(result.text);
+            speak(result.text);
+          }
+          return;
+        }
+        // Otherwise let Nova answer as an astronomy teacher.
+        fetchNovaResponse(
+          `Student said: "${text}". Answer briefly and warmly as an astronomy teacher about the solar system, planets, the Sun, the Moon, orbits or gravity.`
+        );
+        return;
+      }
       fetchNovaResponse(text);
     },
-    [selectedExperiment, labMode, tableItems]
+    [world, mode]
   );
 
   const { isListening, isSupported, voiceError, voiceLanguage, setVoiceLanguageMode, startListening, stopListening, speak } = useVoice(handleUserSpeech);
@@ -177,16 +193,14 @@ export default function App() {
   const startVR = () => {
     setCountdown(5);
     setMode('countdown');
-    if (world === 'drone') {
-      droneState.mode = droneMode;
-      droneCmd.mode = droneMode;
-      speak('Welcome to the Mentis Drone Academy. Walk to the flight terminal and press E to launch your drone.');
+    if (world === 'solar') {
+      speak('Welcome to the Mentis Solar System Academy. The camera will open and the planets will float in your room. Look at a planet to select it, pinch with your hand to grab it, or ask Nova to teach you.');
     } else {
       speak('Entering chemistry lab room. Use WASD to walk, mouse to look around, and keys 1, 2, 3 for racks.');
     }
   };
 
-  const openLab = (w: 'chemistry' | 'drone') => {
+  const openLab = (w: 'chemistry' | 'solar') => {
     setWorld(w);
     setMode('dashboard');
   };
@@ -195,38 +209,45 @@ export default function App() {
     setMode('menu');
   };
 
-  // Launch the drone from the campus flight terminal -> the flight sim.
-  const launchDrone = () => {
-    droneState.mode = droneMode;
-    droneCmd.mode = droneMode;
-    droneCmd.reset++;
-    setMode('drone');
+  const exitAcademy = () => {
+    setCameraEnabled(false);
+    resetPlanets();
+    backToLabs();
   };
 
-  // Leave a flight back to the walkable campus (drone pauses on its pad).
-  const exitFlight = () => {
-    setMode('campus');
-  };
-
-  // Returning to the campus re-spawns the pilot at the academy entrance.
+  // Follow one-shot camera toggles from the HUD / voice commands.
   useEffect(() => {
-    if (mode === 'campus') {
-      window.dispatchEvent(
-        new CustomEvent('campus-respawn', { detail: { x: CAMPUS_SPAWN.x, y: CAMPUS_SPAWN.y, z: CAMPUS_SPAWN.z } })
-      );
+    if (solarCmd.cameraToggle > 0) {
+      solarCmd.cameraToggle = 0;
+      setCameraEnabled((prev) => !prev);
     }
-  }, [mode]);
+  }, [solarCmd.cameraToggle]);
+
+  // When the academy is open and camera is enabled, ask Nova to welcome the
+  // student and explain the controls (once).
+  useEffect(() => {
+    if (mode === 'solar' && world === 'solar' && cameraEnabled) {
+      const t = setTimeout(() => {
+        fetchNovaResponse(
+          'You are now in the Solar System Academy mixed reality view. The Sun and all eight planets plus the Moon float in the room. Tell me what I am seeing and how I can interact: look with the reticle, pinch to grab, or ask you questions. Welcome me warmly.'
+        );
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [mode, world, cameraEnabled]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (mode === 'countdown' && countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      } else if (mode === 'countdown' && countdown === 0) {
-      if (world === 'drone') {
-        // Drone academy is silent — no Nova chemistry voice leaks in here.
-        // Enter the walkable campus; the pilot launches the drone at the
-        // flight terminal.
-        setMode('campus');
+    } else if (mode === 'countdown' && countdown === 0) {
+      if (world === 'solar') {
+        setCameraEnabled(true);
+        setMode('solar');
+        resetPlanets();
+        fetchNovaResponse(
+          'Welcome to the Solar System Academy! I am Nova, your astronomy teacher. You will see the Sun, all eight planets and the Moon floating in front of you. Say a planet name, for example "show Jupiter", or "tell me about Mars", to learn. You can also pinch in front of the camera to grab a planet and drag it.'
+        );
       } else {
         setMode('lab');
         if (labMode === 'guided' && selectedExperiment) {
@@ -240,7 +261,7 @@ export default function App() {
       }
     }
     return () => clearTimeout(timer);
-  }, [mode, countdown, labMode, selectedExperiment, loadExperimentEquipment, world, droneMode]);
+  }, [mode, countdown, labMode, selectedExperiment, loadExperimentEquipment, world]);
 
   // Global Keyboard Shortcuts for Lab Control
   useEffect(() => {
@@ -293,6 +314,36 @@ export default function App() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [mode, isSupported, isListening, startListening, stopListening, tableItems]);
+
+  // Solar Academy keyboard shortcuts: Space push-to-talk, C camera toggle,
+  // R reset planets.
+  useEffect(() => {
+    if (mode !== 'solar') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      if (e.code === 'Space' && !e.repeat && !isListening && isSupported) {
+        startListening();
+      } else if (e.code === 'KeyC') {
+        setCameraEnabled((prev) => !prev);
+      } else if (e.code === 'KeyR') {
+        resetPlanets();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && isSupported) {
+        stopListening();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [mode, isSupported, isListening, startListening, stopListening]);
 
   // Continuous heating simulation: temperature climbs, liquids boil/evaporate,
   // and KMnO₄ thermally decomposes releasing Oxygen gas.
@@ -355,7 +406,12 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: `${message}. Items currently on workstation table: [${currentItemsStr}].`,
-          experiment: labMode === 'guided' ? selectedExperiment?.name : 'Sandbox Mode',
+          experiment:
+            world === 'solar'
+              ? 'Solar System Academy'
+              : labMode === 'guided'
+                ? selectedExperiment?.name
+                : 'Sandbox Mode',
           model: activeModel,
           language,
         }),
@@ -679,14 +735,13 @@ export default function App() {
   return (
     <div className="w-full h-screen bg-gray-950 overflow-hidden font-sans select-none">
       <RemoteBridge />
+      {cameraEnabled && world === 'solar' && mode === 'solar' && <MRCamera enabled={cameraEnabled} />}
       <UIOverlay
         mode={mode}
         countdown={countdown}
         world={world}
         onOpenLab={openLab}
         onBack={backToLabs}
-        droneMode={droneMode}
-        onSelectDroneMode={setDroneMode}
         labMode={labMode}
         setLabMode={handleSetLabMode}
         selectedExperiment={selectedExperiment}
@@ -703,8 +758,17 @@ export default function App() {
         onResetExperimentEquipment={handleResetExperimentEquipment}
       />
 
-      {mode === 'drone' && <DroneHUD onExit={exitFlight} />}
-      {mode === 'campus' && <CampusHUD onLaunch={launchDrone} onExit={backToLabs} />}
+      {mode === 'solar' && world === 'solar' && (
+        <AcademyHUD
+          onExit={exitAcademy}
+          isListening={isListening}
+          voiceError={voiceError}
+          onToggleMic={() => {
+            if (isListening) stopListening();
+            else startListening();
+          }}
+        />
+      )}
 
       {mode === 'lab' && (
         <TableWorkbenchUI
@@ -725,7 +789,7 @@ export default function App() {
         />
       )}
 
-      {(mode === 'lab' || mode === 'drone' || mode === 'campus') && <VRButton />}
+      {(mode === 'lab' || mode === 'solar') && <VRButton />}
 
       <Canvas
         dpr={[1, 1.5]}
@@ -733,7 +797,7 @@ export default function App() {
         gl={{
           powerPreference: 'default',
           antialias: true,
-          alpha: false,
+          alpha: true,
           failIfMajorPerformanceCaveat: false,
         }}
         camera={{ position: [0, 1.8, 3.8], fov: 65 }}
@@ -745,12 +809,16 @@ export default function App() {
         }}
       >
         <XR>
-          {world === 'drone' ? (
-            mode === 'drone' ? (
-              <DroneSim active />
-            ) : (
-              <DroneCampus walk={mode === 'campus'} onLaunch={launchDrone} />
-            )
+          {world === 'solar' && mode === 'solar' ? (
+            <SolarSystem
+              onSelect={(id) => {
+                if (id) {
+                  fetchNovaResponse(
+                    `I just selected ${id}. Briefly say the name of this celestial body and one amazing fact about it.`
+                  );
+                }
+              }}
+            />
           ) : (
             <>
               <LabRoom
@@ -779,7 +847,7 @@ export default function App() {
               autoRotate
               autoRotateSpeed={0.5}
             />
-          ) : world === 'drone' ? null : (
+          ) : mode === 'solar' ? null : (
             <DesktopController mode={mode as 'menu' | 'countdown' | 'lab'} />
           )}
         </XR>

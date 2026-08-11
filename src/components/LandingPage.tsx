@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { Sparkles, FlaskConical, Activity, Headset, Bot, Boxes, GaugeCircle, ArrowRight, GraduationCap, Wifi, Cpu } from 'lucide-react';
+import { Sparkles, FlaskConical, Orbit, Headset, Bot, Boxes, GaugeCircle, ArrowRight, GraduationCap, Wifi, Cpu } from 'lucide-react';
 
 interface LandingPageProps {
-  onOpenLab: (world: 'chemistry' | 'drone') => void;
+  onOpenLab: (world: 'chemistry' | 'solar') => void;
 }
 
 const FEATURES = [
@@ -24,7 +24,7 @@ const FEATURES = [
   {
     icon: GaugeCircle,
     title: 'Real-time Physics',
-    desc: 'Chemical reactions and drone flight behave with realistic physics, live telemetry and instant feedback.',
+    desc: 'Chemistry reactions and orbiting planets behave with realistic physics, live telemetry and instant feedback.',
   },
 ];
 
@@ -39,13 +39,13 @@ const LABS = [
     points: ['Guided experiments + open sandbox', 'Realistic reactions & color mixing', 'AI Nova voice guidance'],
   },
   {
-    world: 'drone' as const,
-    icon: Activity,
-    title: 'Drone Flight Academy',
-    tagline: 'FPV Racing, Missions & Free Flight',
-    desc: 'Take off over a real desert training field. Fly first-person with a live OSD, race through gates, deliver mission packages and learn true stick control.',
-    accent: 'emerald',
-    points: ['Realistic desert world & FPV cameras', 'Free flight, gate racing & missions', 'Keyboard, gamepad or phone controller'],
+    world: 'solar' as const,
+    icon: Orbit,
+    title: 'Solar System Academy',
+    tagline: 'Mixed Reality · AI Voice Astronomy',
+    desc: 'Turn your room into the solar system. The Sun, all eight planets and the Moon float in the air — grab them with your hand, spin them, and ask Nova to teach you about each one.',
+    accent: 'indigo',
+    points: ['Mixed-reality camera passthrough', 'Pinch to grab, drag & rotate by hand', 'AI Nova teaches by voice (EN / हिंदी)'],
   },
 ];
 
@@ -97,8 +97,8 @@ export function LandingPage({ onOpenLab }: LandingPageProps) {
             </h2>
             <p className="max-w-2xl mx-auto text-slate-300 text-sm md:text-base leading-relaxed">
               Mentis VR turns any room into a training facility. We provide fully 3D, interactive training labs —
-              from the chemistry bench to the drone flight field — with VR headset support, an AI voice assistant
-              and realistic real-time physics. Learn by doing, safely and repeatedly.
+              from the chemistry bench to a mixed-reality solar system — with VR headset support, an AI voice
+              assistant and realistic real-time physics. Learn by doing, safely and repeatedly.
             </p>
           </section>
 
@@ -132,7 +132,7 @@ export function LandingPage({ onOpenLab }: LandingPageProps) {
                   className={`group text-left p-6 rounded-3xl border transition-all bg-black/40 hover:scale-[1.02] ${
                     lab.accent === 'blue'
                       ? 'border-white/10 hover:border-blue-500/60 hover:shadow-[0_0_40px_rgba(37,99,235,0.25)]'
-                      : 'border-white/10 hover:border-emerald-500/60 hover:shadow-[0_0_40px_rgba(16,185,129,0.25)]'
+                      : 'border-white/10 hover:border-indigo-500/60 hover:shadow-[0_0_40px_rgba(99,102,241,0.25)]'
                   }`}
                 >
                   <div className="flex items-center gap-4 mb-4">
@@ -140,7 +140,7 @@ export function LandingPage({ onOpenLab }: LandingPageProps) {
                       className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
                         lab.accent === 'blue'
                           ? 'bg-blue-500/20 text-blue-400'
-                          : 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-indigo-500/20 text-indigo-400'
                       }`}
                     >
                       <lab.icon className="w-7 h-7" />
@@ -161,7 +161,7 @@ export function LandingPage({ onOpenLab }: LandingPageProps) {
                   </ul>
                   <div
                     className={`inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest ${
-                      lab.accent === 'blue' ? 'text-blue-400 group-hover:text-blue-300' : 'text-emerald-400 group-hover:text-emerald-300'
+                      lab.accent === 'blue' ? 'text-blue-400 group-hover:text-blue-300' : 'text-indigo-400 group-hover:text-indigo-300'
                     }`}
                   >
                     Open Dashboard <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

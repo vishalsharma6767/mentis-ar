@@ -13,18 +13,15 @@ import {
 import { Experiment, EXPERIMENTS, NovaLanguage, NovaModelInfo } from '../types';
 import { QRCodeSVG } from 'qrcode.react';
 import { remoteControl } from '../remote/RemoteBridge';
-import { DroneMode } from '../drone/droneModes';
 import { LandingPage } from './LandingPage';
 import { LabDashboard } from './LabDashboard';
 
 interface UIOverlayProps {
-  mode: 'menu' | 'dashboard' | 'countdown' | 'lab' | 'drone' | 'campus';
+  mode: 'menu' | 'dashboard' | 'countdown' | 'lab' | 'solar';
   countdown: number;
-  world: 'chemistry' | 'drone';
-  onOpenLab: (world: 'chemistry' | 'drone') => void;
+  world: 'chemistry' | 'solar';
+  onOpenLab: (world: 'chemistry' | 'solar') => void;
   onBack: () => void;
-  droneMode: DroneMode;
-  onSelectDroneMode: (mode: DroneMode) => void;
   labMode: 'guided' | 'sandbox';
   setLabMode: (mode: 'guided' | 'sandbox') => void;
   selectedExperiment: Experiment | null;
@@ -47,8 +44,6 @@ export function UIOverlay({
   world,
   onOpenLab,
   onBack,
-  droneMode,
-  onSelectDroneMode,
   labMode,
   setLabMode,
   selectedExperiment,
@@ -81,8 +76,8 @@ export function UIOverlay({
     return () => clearInterval(id);
   }, []);
 
-  // Phone controller is only used by the drone lab — chemistry has no phone controller.
-  const showPhoneController = world === 'drone' && (mode === 'dashboard' || mode === 'campus' || mode === 'drone');
+  // Phone controller is only used by the solar academy remote.
+  const showPhoneController = world === 'solar' && (mode === 'dashboard' || mode === 'solar');
 
   return (
     <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-6">
@@ -124,7 +119,7 @@ export function UIOverlay({
               </span>
               <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
                 <Smartphone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                Scan to open the drone phone controller
+                Scan to open the academy remote
               </span>
               <span className="text-[10px] font-bold text-slate-400">
                 Code: <span className="text-sky-300 font-mono tracking-widest text-[13px]">{pairInfo.code}</span>
@@ -154,8 +149,6 @@ export function UIOverlay({
             setLabMode={setLabMode}
             selectedExperiment={selectedExperiment}
             onSelectExperiment={onSelectExperiment}
-            droneMode={droneMode}
-            onSelectDroneMode={onSelectDroneMode}
             onStartVR={onStartVR}
             onBack={onBack}
           />
@@ -173,14 +166,14 @@ export function UIOverlay({
             </div>
             <div
               className={`text-white px-10 py-4 rounded-full font-black uppercase tracking-[0.3em] shadow-[0_0_30px_rgba(37,99,235,0.6)] animate-pulse text-center ${
-                world === 'drone' ? 'bg-emerald-600' : 'bg-blue-600'
+                world === 'solar' ? 'bg-indigo-600' : 'bg-blue-600'
               }`}
             >
-              {world === 'drone' ? 'Entering Drone Academy Campus...' : 'Entering Chemistry Lab Room...'}
+              {world === 'solar' ? 'Opening Solar System Academy...' : 'Entering Chemistry Lab Room...'}
               <br />
               <span className="text-[10px] font-medium opacity-80 normal-case tracking-normal mt-1 block">
-                {world === 'drone'
-                  ? 'Walk to the Flight Terminal and press E to launch your drone'
+                {world === 'solar'
+                  ? 'Camera opens — the Sun and planets float in your room'
                   : 'Use WASD to Walk, Mouse to Look Around, Keys 1-3 to Open Racks'}
               </span>
             </div>

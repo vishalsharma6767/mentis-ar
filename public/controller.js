@@ -57,9 +57,7 @@
         debug("paired!");
         $("pair").classList.add("hidden");
         $("controls").classList.remove("hidden");
-        $("actionBar").classList.remove("hidden");
         setStatus("PAIRED", true);
-        goLandscape();
       } else if (msg.type === "error") {
         $("pairError").textContent = msg.message || "Error";
       }
@@ -87,7 +85,6 @@
     code = c;
     $("pairError").textContent = "";
     send({ type: "controller", code: code });
-    goLandscape();
   });
 
   $("code").addEventListener("keydown", function (e) {
@@ -108,139 +105,76 @@
 
   connect();
 
-  // ---- Landscape lock (best effort) ----
-  function goLandscape() {
-    try {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().then(function () {
-          if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock("landscape").catch(function () {});
-          }
-        }).catch(function () {});
-      } else if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock("landscape").catch(function () {});
-      }
-    } catch (e) {}
-  }
-  $("landscapeBtn").addEventListener("click", goLandscape);
+  // ---- Touchpad: swipe to rotate the solar system, tap to select ----
+  var touch = { id: null, x: 0, y: 0, moved: 0 };
+  var zone = $("touchZone");
 
-  // ---- Mode-2 virtual joysticks ----
-  // Left stick: throttle (up = climb) + yaw (left/right rotate).
-  // Right stick: pitch (forward/back tilt) + roll (left/right tilt).
-  var JOY_RADIUS = 46;
-  var sticks = {
-    left: { id: null, x: 0, y: 0, knob: $("leftKnob") },
-    right: { id: null, x: 0, y: 0, knob: $("rightKnob") },
-  };
+  zone.addEventListener("pointerdown", function (e) {
+    e.stopPropagation();
+    touch.id = e.pointerId;
+    touch.x = e.clientX;
+    touch.y = e.clientY;
+    touch.moved = 0;
+    zone.setPointerCapture(e.pointerId);
+  });
 
-  function updateStick(zone, stick, e) {
-    var rect = zone.getBoundingClientRect();
-    var cx = rect.left + rect.width / 2;
-    var cy = rect.top + rect.height / 2;
-    var dx = e.clientX - cx;
-    var dy = e.clientY - cy;
-    var len = Math.hypot(dx, dy);
-    if (len > JOY_RADIUS) {
-      dx = (dx / len) * JOY_RADIUS;
-      dy = (dy / len) * JOY_RADIUS;
+  zone.addEventListener("pointermove", function (e) {
+    if (e.pointerId !== touch.id) return;
+    var dx = e.clientX - touch.x;
+    var dy = e.clientY - touch.y;
+    touch.x = e.clientX;
+    touch.y = e.clientY;
+    touch.moved += Math.abs(dx) + Math.abs(dy);
+    send({ type: "look", dx: dx, dy: dy }); // rotate the model
+  });
+
+  function endTouch(e) {
+    if (e.pointerId !== touch.id) return;
+    touch.id = null;
+    if (touch.moved < 8) {
+      // tap = select the planet at the centre of the view
+      send({ type: "select" });
     }
-    stick.x = dx / JOY_RADIUS;
-    stick.y = dy / JOY_RADIUS;
-    stick.knob.style.transform = "translate(" + dx + "px," + dy + "px)";
   }
+  ["pointerup", "pointercancel"].forEach(function (ev) {
+    zone.addEventListener(ev, endTouch);
+  });
 
-  function resetStick(stick) {
-    stick.id = null;
-    stick.x = 0;
-    stick.y = 0;
-    stick.knob.style.transform = "translate(0,0)";
-  }
-
-  function bindStick(zoneName, stickName) {
-    var zone = $(zoneName);
-    var stick = sticks[stickName];
-    zone.addEventListener("pointerdown", function (e) {
-      e.stopPropagation();
-      stick.id = e.pointerId;
-      zone.setPointerCapture(e.pointerId);
-      updateStick(zone, stick, e);
-    });
-    zone.addEventListener("pointermove", function (e) {
-      if (e.pointerId === stick.id) updateStick(zone, stick, e);
-    });
-    ["pointerup", "pointercancel"].forEach(function (ev) {
-      zone.addEventListener(ev, function (e) {
-        if (e.pointerId === stick.id) resetStick(stick);
-      });
-    });
-  }
-
-  bindStick("leftZone", "left");
-  bindStick("rightZone", "right");
-
-  // ---- Drone telemetry stream (30 Hz) ----
-  // Left stick: throttle = up positive, yaw = right positive.
-  // Right stick: pitch = forward positive (tilt nose down), roll = right positive.
-  var turboHeld = false;
-  var stream = setInterval(function () {
+  // ---- Buttons ----
+  function sendKey(code) {
     if (!paired) return;
-    var l = sticks.left;
-    var r = sticks.right;
-    send({
-      type: "drone",
-      throttle: Math.max(0, -l.y),
-      yaw: l.x,
-      pitch: -r.y,
-      roll: r.x,
-      turbo: turboHeld,
-      active: true,
-    });
-  }, 33);
-  window.addEventListener("pagehide", function () {
-    clearInterval(stream);
-  });
-
-  // ---- Command buttons ----
-  function sendCmd(cmd) {
-    if (!paired) return;
-    send({ type: "droneCmd", cmd: cmd });
-    debug("cmd " + cmd);
+    send({ type: "key", code: code, down: true });
+    setTimeout(function () {
+      send({ type: "key", code: code, down: false });
+    }, 60);
+    debug("key " + code);
   }
 
-  $("takeoffBtn").addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    sendCmd("takeoff");
-  });
-  $("landBtn").addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    sendCmd("land");
-  });
-  $("resetBtn").addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    sendCmd("reset");
-  });
-  $("modeBtn").addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    sendCmd("mode");
-  });
   $("cameraBtn").addEventListener("pointerdown", function (e) {
     e.preventDefault();
-    sendCmd("camera");
+    sendKey("KeyC");
   });
 
-  // TURBO is a hold-to-boost button.
-  function setTurbo(on) {
-    turboHeld = on;
-    $("turboBtn").classList.toggle("active", on);
-  }
-  $("turboBtn").addEventListener("pointerdown", function (e) {
+  $("resetBtn").addEventListener("pointerdown", function (e) {
     e.preventDefault();
-    setTurbo(true);
+    sendKey("KeyR");
+  });
+
+  // TALK is hold-to-talk (Spacebar push-to-talk in the solar academy).
+  var voiceHeld = false;
+  function setVoice(on) {
+    voiceHeld = on;
+    $("voiceBtn").classList.toggle("active", on);
+    if (paired) send({ type: "voice", down: on });
+  }
+  $("voiceBtn").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    setVoice(true);
   });
   ["pointerup", "pointercancel"].forEach(function (ev) {
-    $("turboBtn").addEventListener(ev, function (e) {
+    $("voiceBtn").addEventListener(ev, function (e) {
       e.preventDefault();
-      setTurbo(false);
+      setVoice(false);
     });
   });
 

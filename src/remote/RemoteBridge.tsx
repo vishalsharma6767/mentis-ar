@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { solarCmd } from '../solar/solarState';
 
 // Shared, mutable input state written by the WebSocket bridge and read every
 // frame by WASDPlayerControls inside LabRoom.tsx.
@@ -10,15 +11,6 @@ export const remoteControl = {
   tilt: null as { yaw: number; pitch: number } | null,
   connected: false,
   controllerCount: 0,
-  drone: null as {
-    pitch: number;
-    roll: number;
-    yaw: number;
-    throttle: number;
-    turbo: boolean;
-    active: boolean;
-  } | null,
-  droneCmd: null as string | null,
 };
 
 const lastKeys: Record<string, boolean> = {};
@@ -104,18 +96,8 @@ export function RemoteBridge() {
               dispatchKey(msg.code, Boolean(msg.down));
             }
             break;
-          case 'drone':
-            remoteControl.drone = {
-              pitch: Number(msg.pitch) || 0,
-              roll: Number(msg.roll) || 0,
-              yaw: Number(msg.yaw) || 0,
-              throttle: Math.max(0, Math.min(1, Number(msg.throttle) || 0)),
-              turbo: Boolean(msg.turbo),
-              active: true,
-            };
-            break;
-          case 'droneCmd':
-            remoteControl.droneCmd = typeof msg.cmd === 'string' ? msg.cmd : null;
+          case 'select':
+            solarCmd.select += 1; // academy: select planet at view centre
             break;
           case 'voice':
             dispatchKey('Space', Boolean(msg.down));
@@ -130,8 +112,6 @@ export function RemoteBridge() {
         if (!alive) return;
         applyMove(0, 0);
         remoteControl.tilt = null;
-        remoteControl.drone = null;
-        remoteControl.droneCmd = null;
         // Auto-reconnect so a server restart doesn't permanently kill the lab tab.
         setTimeout(connect, 2000);
       };
@@ -142,8 +122,6 @@ export function RemoteBridge() {
     return () => {
       alive = false;
       remoteControl.connected = false;
-      remoteControl.drone = null;
-      remoteControl.droneCmd = null;
       applyMove(0, 0);
       remoteControl.tilt = null;
     };
