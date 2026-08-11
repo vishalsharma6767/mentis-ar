@@ -266,20 +266,56 @@ header {
   pointer-events: none;
 }
 
-/* ---- Chemistry: action buttons ---- */
-.btnGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* ---- Chemistry: numbers + action buttons ---- */
+.ctrlGrid {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.btnGrid .abtn {
-  padding: 14px 4px;
-  font-size: 11px;
+.numRow {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
 }
 
-.btnGrid .abtn.voice {
-  grid-column: span 2;
+.numRow .abtn {
+  padding: 10px 2px;
+  font-size: 10px;
+}
+
+.numRow .abtn.num {
+  background: #0f172a;
+  color: #a5b4fc;
+  border-color: #334155;
+}
+
+.numRow .abtn.num:nth-child(-n + 3) {
+  background: #1e1b4b;
+  color: #c7d2fe;
+  border-color: rgba(99, 102, 241, 0.55);
+  font-weight: 900;
+}
+
+.actionRow2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.actionRow2 .abtn {
+  flex: 1 1 17%;
+  padding: 11px 2px;
+  font-size: 10px;
+}
+
+.actionRow2 .abtn.exit {
+  flex: 1 1 100%;
+  background: #7f1d1d;
+  border-color: #ef4444;
+  color: #fecaca;
+  font-size: 12px;
+  letter-spacing: 0.18em;
 }
 
 .zone {
@@ -411,23 +447,40 @@ header {
     gap: 6px;
   }
 
-  .btnGrid {
+  .ctrlGrid {
     position: fixed;
-    top: 92px;
+    top: 90px;
     left: 12px;
     right: 12px;
     z-index: 30;
-    grid-template-columns: repeat(8, 1fr);
     gap: 6px;
   }
 
-  .btnGrid .abtn {
-    padding: 10px 2px;
+  .numRow {
+    grid-template-columns: repeat(9, 1fr);
+    gap: 5px;
+  }
+
+  .numRow .abtn {
+    padding: 8px 2px;
     font-size: 10px;
   }
 
-  .btnGrid .abtn.voice {
-    grid-column: auto;
+  .actionRow2 {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: 5px;
+  }
+
+  .actionRow2 .abtn {
+    padding: 9px 2px;
+    font-size: 9px;
+  }
+
+  .actionRow2 .abtn.exit {
+    grid-column: 1 / -1;
+    padding: 7px 2px;
+    font-size: 11px;
   }
 
   .stickRow {
@@ -440,8 +493,8 @@ header {
 
   .stickRow .stick {
     flex: 0 0 auto;
-    width: min(40vmin, 240px);
-    height: min(40vmin, 240px);
+    width: min(36vmin, 210px);
+    height: min(36vmin, 210px);
     border-radius: 50%;
   }
 

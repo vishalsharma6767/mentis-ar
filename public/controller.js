@@ -78,6 +78,26 @@
     { passive: true }
   );
 
+  // ---- Exit: leave fullscreen here AND tell the lab to come out of VR ----
+  function exitPhoneFullscreen() {
+    var d = document;
+    var ex = d.exitFullscreen || d.webkitExitFullscreen;
+    if (ex) {
+      try { ex.call(d); } catch (e) {}
+    }
+    var so = screen.orientation || null;
+    if (so && so.unlock && typeof so.unlock === "function") {
+      try { so.unlock(); } catch (e) {}
+    }
+  }
+
+  $("exitBtn").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    send({ type: "exit" });
+    exitPhoneFullscreen();
+    debug("exit requested");
+  });
+
   function connect() {
     if (ws) {
       try { ws.close(); } catch (e) {}

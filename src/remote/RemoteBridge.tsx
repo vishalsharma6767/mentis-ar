@@ -17,6 +17,13 @@ export const remoteControl = {
 
 export const lastKeys: Record<string, boolean> = {};
 
+// Registered by App.tsx so the controller EXIT button can take the lab (and the
+// phone screen) out of fullscreen/VR mode from anywhere.
+let exitHandler: (() => void) | null = null;
+export function onRemoteExit(fn: (() => void) | null) {
+  exitHandler = fn;
+}
+
 export function dispatchKey(code: string, down: boolean) {
   // Derive a proper `key` value too: some handlers (e.g. the rack modal item
   // picker) read e.key (parseInt), not e.code.
@@ -104,6 +111,10 @@ export function RemoteBridge() {
             break;
           case 'select':
             solarCmd.select += 1; // academy: select planet at view centre
+            break;
+          case 'exit':
+            // Controller EXIT — App.tsx tears down fullscreen/split-screen.
+            if (exitHandler) exitHandler();
             break;
           case 'voice':
             dispatchKey('Space', Boolean(msg.down));

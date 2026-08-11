@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#020617" />
     <title>Mentis Academy Remote</title>
-    <link rel="stylesheet" href="/controller.css?v=8" />
+    <link rel="stylesheet" href="/controller.css?v=9" />
   </head>
   <body>
     <div id="app">
@@ -42,7 +42,7 @@
           <button class="mode" data-mode="solar">SOLAR</button>
         </div>
 
-        <!-- CHEMISTRY LAB: twin joysticks + action buttons -->
+        <!-- CHEMISTRY LAB: twin joysticks + numbers + action buttons -->
         <div id="chemLayout" class="layout">
           <div class="stickRow">
             <div class="stick" id="stickL">
@@ -54,15 +54,33 @@
               <div class="knob"></div>
             </div>
           </div>
-          <div class="btnGrid">
-            <button class="abtn" data-key="Digit1">GLASS</button>
-            <button class="abtn" data-key="Digit2">CHEMS</button>
-            <button class="abtn" data-key="Digit3">TOOLS</button>
-            <button class="abtn" data-key="KeyP">POUR</button>
-            <button class="abtn" data-key="KeyF">HEAT</button>
-            <button class="abtn" data-key="KeyC">CLEAR</button>
-            <button class="abtn" data-key="KeyN">NOVA</button>
-            <button class="abtn voice" id="voiceBtnChem">🎤 TALK</button>
+          <div class="ctrlGrid">
+            <!-- Rack openers (1/2/3) AND item picker when the rack menu is open (1-9) -->
+            <div class="numRow">
+              <button class="abtn num" data-key="Digit1">1 GLASS</button>
+              <button class="abtn num" data-key="Digit2">2 CHEMS</button>
+              <button class="abtn num" data-key="Digit3">3 TOOLS</button>
+              <button class="abtn num" data-key="Digit4">4</button>
+              <button class="abtn num" data-key="Digit5">5</button>
+              <button class="abtn num" data-key="Digit6">6</button>
+              <button class="abtn num" data-key="Digit7">7</button>
+              <button class="abtn num" data-key="Digit8">8</button>
+              <button class="abtn num" data-key="Digit9">9</button>
+            </div>
+            <!-- Item navigation + lab actions -->
+            <div class="actionRow2">
+              <button class="abtn" data-key="KeyQ">◀</button>
+              <button class="abtn" data-key="KeyE">▶</button>
+              <button class="abtn" data-key="KeyX">REMOVE</button>
+              <button class="abtn" data-key="Escape">ESC</button>
+              <button class="abtn" data-key="KeyP">POUR</button>
+              <button class="abtn" data-key="KeyM">MIX</button>
+              <button class="abtn" data-key="KeyF">HEAT</button>
+              <button class="abtn" data-key="KeyC">CLEAR</button>
+              <button class="abtn" data-key="KeyN">NOVA</button>
+              <button class="abtn voice" id="voiceBtnChem">🎤 TALK</button>
+              <button class="abtn exit" id="exitBtn">⏏ EXIT</button>
+            </div>
           </div>
         </div>
 
@@ -80,6 +98,6 @@
       </div>
     </div>
 
-    <script src="/controller.js?v=8"></script>
+    <script src="/controller.js?v=9"></script>
   </body>
 </html>

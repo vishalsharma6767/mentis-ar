@@ -10,7 +10,7 @@ import { TableWorkbenchUI } from './components/TableWorkbenchUI';
 import { LabGamepad } from './components/LabGamepad';
 import { LabControlsPanel } from './components/LabControlsPanel';
 import { XRWalk } from './components/XRWalk';
-import { RemoteBridge } from './remote/RemoteBridge';
+import { RemoteBridge, onRemoteExit } from './remote/RemoteBridge';
 import { SolarSystem } from './solar/SolarSystem';
 import { AcademyHUD } from './solar/AcademyHUD';
 import { MRCamera } from './solar/MRCamera';
@@ -204,6 +204,9 @@ export default function App() {
   }, [mode]);
 
   const startVR = () => {
+    // Phone-in-headset: go fullscreen + landscape as soon as the student taps
+    // Start (browsers require this to be inside the tap gesture).
+    if (isTouchDevice) enterPhoneFullscreen();
     setCountdown(5);
     setMode('countdown');
     if (world === 'solar') {
@@ -229,6 +232,69 @@ export default function App() {
     }
     setMode('menu');
   };
+
+  // ---- Phone-in-headset fullscreen flow ----
+  const isTouchDevice =
+    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  const enterPhoneFullscreen = () => {
+    const el = document.documentElement as any;
+    const rfs = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (rfs) {
+      try {
+        const p = rfs.call(el);
+        p?.catch?.(() => {});
+      } catch {
+        // ignore
+      }
+    }
+    const so = (screen as any)?.orientation;
+    if (so?.lock) {
+      try {
+        so.lock('landscape').catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const exitPhoneFullscreen = () => {
+    const d = document as any;
+    const ex = d.exitFullscreen || d.webkitExitFullscreen;
+    if (ex) {
+      try {
+        ex.call(d);
+      } catch {
+        // ignore
+      }
+    }
+    const so = (screen as any)?.orientation;
+    if (so?.unlock) {
+      try {
+        so.unlock();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  // Controller EXIT button -> take the lab phone out of fullscreen + split VR.
+  const handleControllerExit = useCallback(() => {
+    stopHeadTracking();
+    headState.splitActive = false;
+    setSplitView(false);
+    try {
+      localStorage.setItem('mentis-split-vr', '0');
+    } catch {
+      // ignore
+    }
+    exitPhoneFullscreen();
+  }, []);
+
+  useEffect(() => {
+    onRemoteExit(handleControllerExit);
+    return () => onRemoteExit(null);
+  }, [handleControllerExit]);
 
   const exitAcademy = () => {
     setCameraEnabled(false);
@@ -788,9 +854,13 @@ export default function App() {
     }
   };
 
+  // Immersive headset mode (split-screen VR): hide all 2D lab chrome so the
+  // experiment fills the screen when the phone sits in the headset. Only inside
+  // the live 3D worlds — menu/dashboard/countdown must always stay visible.
+  const immersive = splitView && (mode === 'lab' || mode === 'solar');
+
   // Scene rendered into each eye of the split-screen stereo view.
-  const renderWorld = (eye: 'left' | 'right') => (
-    <>
+  const renderWorld = (eye: 'left' | 'right') => (    <>
       {world === 'solar' && mode === 'solar' ? (
         <SolarSystem
           onSelect={(id) => {
@@ -825,9 +895,10 @@ export default function App() {
     <div className="w-full h-screen bg-gray-950 overflow-hidden font-sans select-none">
       <RemoteBridge />
       {mode === 'lab' && <LabGamepad />}
-      {mode === 'lab' && <LabControlsPanel />}
+      {mode === 'lab' && !immersive && <LabControlsPanel />}
       {cameraEnabled && world === 'solar' && mode === 'solar' && <MRCamera enabled={cameraEnabled} />}
-      <UIOverlay
+      {!immersive && (
+        <UIOverlay
         mode={mode}
         countdown={countdown}
         world={world}
@@ -847,9 +918,10 @@ export default function App() {
         onModelChange={handleModelChange}
         onAskNovaGuide={handleAskNovaGuide}
         onResetExperimentEquipment={handleResetExperimentEquipment}
-      />
+        />
+      )}
 
-      {mode === 'solar' && world === 'solar' && (
+      {mode === 'solar' && world === 'solar' && !immersive && (
         <AcademyHUD
           onExit={exitAcademy}
           isListening={isListening}
@@ -861,7 +933,7 @@ export default function App() {
         />
       )}
 
-      {mode === 'lab' && (
+      {mode === 'lab' && !immersive && (
         <TableWorkbenchUI
           rackCategory={activeRackCategory}
           onCloseRackMenu={() => setActiveRackCategory(null)}
