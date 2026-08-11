@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { headState } from './headRig';
+import { headState, updateHead } from './headRig';
 import { remoteControl } from '../remote/RemoteBridge';
 
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -9,8 +9,9 @@ const _fwd = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 
 // Drives one eye camera of the split-screen stereo view from the shared
-// headset state: head yaw/pitch (gyroscope) + a fixed interpupillary offset.
-// The left eye also integrates walking input so it is applied exactly once.
+// headset state: the gyroscope base + touchpad look offset + a fixed
+// interpupillary offset. The left eye also integrates walking input so it is
+// applied exactly once.
 export function StereoRig({ eye, clampMode }: { eye: 'left' | 'right'; clampMode: 'lab' | 'solar' }) {
   const { camera } = useThree();
 
@@ -18,17 +19,19 @@ export function StereoRig({ eye, clampMode }: { eye: 'left' | 'right'; clampMode
     const s = headState;
 
     if (eye === 'left') {
-      // Right-stick / phone-controller look while in split VR.
+      // Look touchpad / right-stick look while in split VR. This is added as a
+      // persistent offset on top of the gyro (lookYaw/lookPitch) so the gyro
+      // no longer erases it on the next orientation event.
       if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
         const sens = 0.0035;
-        s.yaw -= remoteControl.lookDx * sens;
-        s.pitch -= remoteControl.lookDy * sens;
-        s.pitch = Math.max(-1.1, Math.min(1.1, s.pitch));
+        s.lookYaw -= remoteControl.lookDx * sens;
+        s.lookPitch -= remoteControl.lookDy * sens;
+        s.lookPitch = Math.max(-1.1, Math.min(1.1, s.lookPitch));
         remoteControl.lookDx = 0;
         remoteControl.lookDy = 0;
       }
 
-      // Left-stick walking.
+      // Left-stick walking (relative to where we are currently looking).
       const x = remoteControl.moveX;
       const z = remoteControl.moveZ;
       if (x !== 0 || z !== 0) {
@@ -46,6 +49,9 @@ export function StereoRig({ eye, clampMode }: { eye: 'left' | 'right'; clampMode
         }
         s.playerPos.y = 1.6;
       }
+
+      // Merge gyro + touchpad look into the final orientation every frame.
+      updateHead();
     }
 
     _right.set(Math.cos(s.yaw), 0, -Math.sin(s.yaw));

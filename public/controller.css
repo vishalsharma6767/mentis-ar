@@ -238,6 +238,40 @@ header {
   background: rgba(49, 46, 129, 0.45);
 }
 
+/* ---- Pure touchpad (LOOK pad) — no joystick knob ---- */
+.stick.touchpad {
+  border-style: dashed;
+  border-color: #334155;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.06), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.06) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.06) 0 1px, transparent 1px 12px),
+    rgba(2, 6, 23, 0.45);
+}
+
+.stick.touchpad.active {
+  border-color: #38bdf8;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.12), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(56, 189, 248, 0.1) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0 1px, transparent 1px 12px),
+    rgba(30, 41, 59, 0.55);
+}
+
+.tpCursor {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.35);
+  border: 2px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  will-change: left, top, opacity;
+}
+
 .stick .knob {
   position: absolute;
   top: 50%;

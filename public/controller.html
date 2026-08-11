@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#020617" />
     <title>Mentis Academy Remote</title>
-    <link rel="stylesheet" href="/controller.css?v=10" />
+    <link rel="stylesheet" href="/controller.css?v=11" />
   </head>
   <body>
     <div id="app">
@@ -49,9 +49,9 @@
               <span class="stickLabel">WALK</span>
               <div class="knob"></div>
             </div>
-            <div class="stick" id="stickR">
-              <span class="stickLabel">LOOK · TOUCHPAD</span>
-              <div class="knob"></div>
+            <div class="stick touchpad" id="stickR">
+              <span class="stickLabel">LOOK · DRAG</span>
+              <div class="tpCursor" id="lookCursor"></div>
             </div>
           </div>
           <div class="ctrlGrid">
@@ -98,6 +98,6 @@
       </div>
     </div>
 
-    <script src="/controller.js?v=10"></script>
+    <script src="/controller.js?v=11"></script>
   </body>
 </html>

@@ -250,25 +250,24 @@
     el.addEventListener("pointercancel", end);
   }
 
-  // Touchpad for the LOOK pad: the knob follows the finger wherever it lands
-  // on the pad (not anchored to the centre), and look deltas come from how far
-  // the finger travels. Drag anywhere to rotate; lift and touch a new spot to
-  // carry on without jumping.
+  // Pure touchpad for the LOOK pad: no virtual joystick knob. The finger lands
+  // anywhere on the pad and a small cursor dot follows it; look deltas come
+  // from how far the finger travels. Drag anywhere to rotate — lift and touch
+  // a new spot to carry on without jumping. Works together with the WALK stick
+  // so you can move and look at the same time.
   function setupTouchpad(el, onDelta) {
-    var knob = el.querySelector(".knob");
+    var cursor = el.querySelector(".tpCursor");
     var state = { id: null, x: 0, y: 0 };
 
     function localPos(e) {
       var r = el.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     }
-    function setKnob(x, y) {
-      var cw = el.clientWidth;
-      var ch = el.clientHeight;
-      var cx = Math.max(0, Math.min(cw, x));
-      var cy = Math.max(0, Math.min(ch, y));
-      knob.style.transform =
-        "translate(" + (cx - cw / 2) + "px," + (cy - ch / 2) + "px)";
+    function showCursor(x, y) {
+      if (!cursor) return;
+      cursor.style.left = x + "px";
+      cursor.style.top = y + "px";
+      cursor.style.opacity = 1;
     }
 
     el.addEventListener("pointerdown", function (e) {
@@ -280,7 +279,7 @@
       state.y = p.y;
       el.setPointerCapture(e.pointerId);
       el.classList.add("active");
-      setKnob(p.x, p.y);
+      showCursor(p.x, p.y);
     });
 
     el.addEventListener("pointermove", function (e) {
@@ -290,14 +289,14 @@
       var dy = p.y - state.y;
       state.x = p.x;
       state.y = p.y;
-      setKnob(p.x, p.y);
+      showCursor(p.x, p.y);
       if (onDelta) onDelta(dx, dy);
     });
 
     function end(e) {
       if (e.pointerId !== state.id) return;
       state.id = null;
-      knob.style.transform = "translate(0,0)";
+      if (cursor) cursor.style.opacity = 0;
       el.classList.remove("active");
     }
     el.addEventListener("pointerup", end);

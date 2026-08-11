@@ -323,6 +323,53 @@ export function LabRoom({
           <planeGeometry args={[8, 6]} />
           <meshStandardMaterial color="#bae6fd" roughness={0.05} opacity={0.5} transparent />
         </mesh>
+
+        {/* Periodic table poster on the left wall */}
+        <group position={[-6.78, 4.9, -3.6]} rotation-y={Math.PI / 2}>
+          <Box args={[2.4, 1.7, 0.05]}>
+            <meshStandardMaterial color="#0f172a" />
+          </Box>
+          <Box args={[2.52, 0.09, 0.06]} position={[0, 0.85, 0]}>
+            <meshStandardMaterial color="#475569" />
+          </Box>
+          <Text position={[0, 0.5, 0.03]} fontSize={0.19} color="#38bdf8" anchorX="center">
+            PERIODIC TABLE
+          </Text>
+          <Text position={[0, 0.16, 0.03]} fontSize={0.11} color="#cbd5e1" anchorX="center">
+            H He Li Be B C N O F Ne Na Mg
+          </Text>
+          <Text position={[0, -0.02, 0.03]} fontSize={0.11} color="#cbd5e1" anchorX="center">
+            Al Si P S Cl Ar K Ca Sc Ti V Cr
+          </Text>
+          <Text position={[0, -0.2, 0.03]} fontSize={0.11} color="#cbd5e1" anchorX="center">
+            Mn Fe Co Ni Cu Zn Fe3+ Cu2+
+          </Text>
+          <Text position={[0, -0.62, 0.03]} fontSize={0.09} color="#64748b" anchorX="center">
+            flame tests: Li red · Na yellow · Cu green · K lilac
+          </Text>
+        </group>
+
+        {/* Lab safety poster on the right wall */}
+        <group position={[6.78, 4.9, 3.6]} rotation-y={-Math.PI / 2}>
+          <Box args={[1.9, 1.3, 0.05]}>
+            <meshStandardMaterial color="#1c1917" />
+          </Box>
+          <Text position={[0, 0.4, 0.03]} fontSize={0.17} color="#fbbf24" anchorX="center">
+            LAB SAFETY
+          </Text>
+          <Text position={[0, 0.1, 0.03]} fontSize={0.1} color="#e2e8f0" anchorX="center">
+            Wear safety goggles & tie hair back
+          </Text>
+          <Text position={[0, -0.08, 0.03]} fontSize={0.1} color="#e2e8f0" anchorX="center">
+            No eating or drinking · wash hands
+          </Text>
+          <Text position={[0, -0.26, 0.03]} fontSize={0.1} color="#e2e8f0" anchorX="center">
+            Ventilate fumes · acid into water
+          </Text>
+          <Text position={[0, -0.5, 0.03]} fontSize={0.09} color="#f87171" anchorX="center">
+            Emergency: stop · drop · roll
+          </Text>
+        </group>
       </group>
 
       {/* LEFT CORNER 1: PROFESSIONAL TOXIC FUME HOOD (FLOOR LEVEL Y = -0.5) */}
@@ -590,9 +637,22 @@ export function LabRoom({
       />
 
       {/* Photorealistic Lighting Setup */}
-      <ambientLight intensity={0.55} color="#ffffff" />
-      <hemisphereLight args={['#f8fafc', '#94a3b8', 0.5]} />
-      <directionalLight position={[5, 12, 6]} intensity={1.5} />
+      <ambientLight intensity={0.45} color="#ffffff" />
+      <hemisphereLight args={['#f8fafc', '#94a3b8', 0.45]} />
+      {/* Key sunlight through the window — casts soft real shadows */}
+      <directionalLight
+        position={[5, 12, 6]}
+        intensity={1.7}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-9}
+        shadow-camera-right={9}
+        shadow-camera-top={9}
+        shadow-camera-bottom={-9}
+        shadow-camera-far={35}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.03}
+      />
       {/* Warm pendant light over the central workbench so glass pops */}
       <pointLight position={[0, 3.0, 0.25]} intensity={1.2} color="#fff7ed" distance={7} />
       <pointLight position={[0, 4, 0]} intensity={0.5} color="#f8fafc" distance={9} />
@@ -1603,7 +1663,7 @@ function RenderBunsenBurner({ isHeating }: { isHeating: boolean }) {
         <meshStandardMaterial color="#1e293b" roughness={0.9} />
       </Cylinder>
 
-        {/* Realistic Flame Cone & Light */}
+        {/* Realistic Flame Cone & Flickering Light */}
       {isHeating && (
         <group position={[0, 0.44, 0]}>
           <Float speed={18} floatIntensity={0.6}>
@@ -1613,12 +1673,32 @@ function RenderBunsenBurner({ isHeating }: { isHeating: boolean }) {
             <Cylinder args={[0, 0.04, 0.14, 16]} position={[0, 0.07, 0]}>
               <meshBasicMaterial color="#3b82f6" />
             </Cylinder>
-            <pointLight position={[0, 0.15, 0]} intensity={4.5} color="#38bdf8" distance={3.5} />
+            <FlickerLight position={[0, 0.15, 0]} base={4.5} color="#38bdf8" distance={3.5} />
           </Float>
         </group>
       )}
     </group>
   );
+}
+
+// Point light that flickers like a live flame (used by the Bunsen burner).
+function FlickerLight({
+  position,
+  base,
+  color,
+  distance,
+}: {
+  position?: [number, number, number];
+  base: number;
+  color: string;
+  distance: number;
+}) {
+  const ref = useRef<THREE.PointLight>(null);
+  useFrame(() => {
+    const l = ref.current;
+    if (l) l.intensity = base * (0.7 + Math.random() * 0.55);
+  });
+  return <pointLight ref={ref} position={position} intensity={base} color={color} distance={distance} />;
 }
 
 // BURETTE CLAMPED ON A RETORT STAND (used for precise titration)

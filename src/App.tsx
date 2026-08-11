@@ -19,6 +19,7 @@ import { parseSolarCommand } from './solar/solarCommands';
 import { StereoRig } from './headset/StereoRig';
 import { SplitVRToggle } from './headset/SplitVRToggle';
 import { headState, startHeadTracking, stopHeadTracking, recenter } from './headset/headRig';
+import { labAudio } from './audio/LabAudio';
 import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage } from './types';
 import { useVoice } from './hooks/useVoice';
 
@@ -136,6 +137,23 @@ export default function App() {
   useEffect(() => {
     setVoiceLanguageMode(language);
   }, [language, setVoiceLanguageMode]);
+
+  // Lab ambience audio: unlock inside any user gesture, fade in while the lab
+  // is open, and add the burner hiss while heating.
+  useEffect(() => {
+    const unlock = () => labAudio.unlock();
+    window.addEventListener('pointerdown', unlock);
+    return () => window.removeEventListener('pointerdown', unlock);
+  }, []);
+
+  useEffect(() => {
+    if (mode === 'lab') labAudio.start();
+    else labAudio.stop();
+  }, [mode]);
+
+  useEffect(() => {
+    labAudio.setHeating(isHeating);
+  }, [isHeating]);
 
   const handleLanguageChange = (lang: NovaLanguage) => {
     setLanguage(lang);
@@ -965,7 +983,7 @@ export default function App() {
           <div className="w-1/2 h-full">
             <Canvas
               dpr={[1, 1.25]}
-              shadows={false}
+              shadows
               gl={{ powerPreference: 'default', antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
               camera={{ position: [0, 1.8, 3.8], fov: 65 }}
               onCreated={({ gl }) => {
@@ -981,7 +999,7 @@ export default function App() {
           <div className="w-1/2 h-full">
             <Canvas
               dpr={[1, 1.25]}
-              shadows={false}
+              shadows
               gl={{ powerPreference: 'default', antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
               camera={{ position: [0, 1.8, 3.8], fov: 65 }}
               onCreated={({ gl }) => {
@@ -998,7 +1016,7 @@ export default function App() {
       ) : (
         <Canvas
           dpr={[1, 1.5]}
-          shadows={false}
+          shadows
           gl={{
             powerPreference: 'default',
             antialias: true,
