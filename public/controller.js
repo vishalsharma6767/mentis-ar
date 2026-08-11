@@ -30,6 +30,54 @@
     }
   }
 
+  // ---- Fullscreen + landscape orientation ----
+  function enterFullscreen() {
+    var el = document.documentElement;
+    var rfs =
+      el.requestFullscreen ||
+      el.webkitRequestFullscreen ||
+      el.msRequestFullscreen;
+    if (rfs) {
+      try {
+        var p = rfs.call(el);
+        if (p && p.catch) p.catch(function () {});
+      } catch (e) {}
+    }
+    var so = screen.orientation || null;
+    if (so && so.lock && typeof so.lock === "function") {
+      try {
+        var lp = so.lock("landscape");
+        if (lp && lp.catch) lp.catch(function () {});
+      } catch (e) {}
+    }
+    if (navigator.vibrate) {
+      try { navigator.vibrate(15); } catch (e) {}
+    }
+  }
+
+  $("fsBtn").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    enterFullscreen();
+  });
+
+  // Auto-enter fullscreen + landscape on the first touch anywhere (Android
+  // browsers need a user gesture; iOS Safari ignores fullscreen gracefully).
+  var fsOnce = false;
+  function maybeFullscreen() {
+    if (fsOnce) return;
+    fsOnce = true;
+    enterFullscreen();
+  }
+  document.addEventListener(
+    "pointerdown",
+    function (e) {
+      if (e.target && e.target.closest && e.target.closest("#controls")) {
+        maybeFullscreen();
+      }
+    },
+    { passive: true }
+  );
+
   function connect() {
     if (ws) {
       try { ws.close(); } catch (e) {}

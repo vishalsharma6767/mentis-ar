@@ -160,9 +160,10 @@ export function attachControlServer(httpServer: HttpServer) {
       // Relay everything else from a paired controller to every lab tab.
       if (role === 'controller' && controllerCodes.has(ws)) {
         logMsg(msg);
-        const payload = { ...msg };
-        delete payload.code;
-        for (const c of clients) send(c, payload);
+        // NOTE: do not strip `code` here — `key` messages need it to replay
+        // the keyboard shortcut on the lab tab (pairing `code` never reaches
+        // this point; it is handled in the `controller` branch above).
+        for (const c of clients) send(c, msg);
       }
     });
 

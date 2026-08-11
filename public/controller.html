@@ -6,8 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#020617" />
     <title>Mentis Academy Remote</title>
-    <link rel="stylesheet" href="/controller.css?v=7" />
+    <link rel="stylesheet" href="/controller.css?v=8" />
   </head>
   <body>
     <div id="app">
@@ -16,7 +20,10 @@
           <span class="dot" id="statusDot"></span>
           MENTIS REMOTE
         </div>
-        <div id="status" class="status off">OFFLINE</div>
+        <div class="headerRight">
+          <button id="fsBtn" class="fsBtn" title="Fullscreen">⛶</button>
+          <div id="status" class="status off">OFFLINE</div>
+        </div>
       </header>
       <div id="debug" class="debug"></div>
 
@@ -25,6 +32,7 @@
         <input id="code" type="number" maxlength="4" inputmode="numeric" placeholder="0000" />
         <button id="pairBtn">CONNECT</button>
         <p id="pairError" class="err"></p>
+        <p class="pairHint">Rotate your phone sideways for landscape — tap ⛶ for fullscreen.</p>
       </div>
 
       <div id="controls" class="controls hidden">
@@ -72,6 +80,6 @@
       </div>
     </div>
 
-    <script src="/controller.js?v=7"></script>
+    <script src="/controller.js?v=8"></script>
   </body>
 </html>

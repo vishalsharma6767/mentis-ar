@@ -77,6 +77,42 @@ header {
 .status.off { color: #94a3b8; }
 .status.ok { color: #22c55e; }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fsBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+  line-height: 1;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #cbd5e1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.fsBtn:active {
+  background: #4f46e5;
+  color: #fff;
+  transform: scale(0.94);
+}
+
+.pairHint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
 /* ---- Pairing panel ---- */
 .pair {
   display: flex;
@@ -312,6 +348,123 @@ header {
 .abtn.voice.active {
   background: #059669;
   color: #fff;
+}
+
+/* ---- Landscape / fullscreen gamepad layout ---- */
+@media (orientation: landscape) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #app {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding: 6px 12px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(6px);
+  }
+
+  header .title {
+    font-size: 11px;
+  }
+
+  .debug {
+    display: none;
+  }
+
+  /* Pairing panel centered in landscape */
+  .pair {
+    padding: 0 20px;
+    justify-content: center;
+  }
+
+  .controls {
+    padding: 44px 10px 10px;
+    gap: 6px;
+  }
+
+  .modes {
+    position: fixed;
+    top: 48px;
+    left: 12px;
+    right: 12px;
+    z-index: 30;
+  }
+
+  .modes .mode {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  /* Chemistry: buttons along the top, sticks at the bottom corners */
+  #chemLayout {
+    gap: 6px;
+  }
+
+  .btnGrid {
+    position: fixed;
+    top: 92px;
+    left: 12px;
+    right: 12px;
+    z-index: 30;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+  }
+
+  .btnGrid .abtn {
+    padding: 10px 2px;
+    font-size: 10px;
+  }
+
+  .btnGrid .abtn.voice {
+    grid-column: auto;
+  }
+
+  .stickRow {
+    flex: 1;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 14px 12px;
+    gap: 16px;
+  }
+
+  .stickRow .stick {
+    flex: 0 0 auto;
+    width: min(40vmin, 240px);
+    height: min(40vmin, 240px);
+    border-radius: 50%;
+  }
+
+  /* Solar: touch zone on the left, actions stacked on the right */
+  #solarLayout {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  #solarLayout .zone {
+    flex: 1;
+  }
+
+  #solarLayout .actionRow {
+    flex-direction: column;
+    width: 120px;
+    flex: 0 0 120px;
+  }
+
+  #solarLayout .actionRow .abtn {
+    padding: 14px 6px;
+    font-size: 11px;
+  }
 }
 
 .hidden {
