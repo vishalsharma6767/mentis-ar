@@ -1,0 +1,11 @@
+node_modules/
+.git/
+dist/
+build/
+coverage/
+drone design/
+assets/
+*.log
+.env
+.env.*
+!.env.example
