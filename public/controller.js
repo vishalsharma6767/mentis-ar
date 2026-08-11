@@ -8,6 +8,7 @@
   var ws = null;
   var paired = false;
   var code = "";
+  var mode = "chem";
 
   var debugLog = [];
   function debug(msg) {
@@ -105,7 +106,133 @@
 
   connect();
 
-  // ---- Touchpad: swipe to rotate the solar system, tap to select ----
+  // ---- Mode switch (which app is running on the big screen) ----
+  try {
+    mode = localStorage.getItem("mentis-remote-mode") || "chem";
+  } catch (e) {}
+  if (mode !== "solar") mode = "chem";
+
+  function applyMode() {
+    $("chemLayout").classList.toggle("hidden", mode !== "chem");
+    $("solarLayout").classList.toggle("hidden", mode !== "solar");
+    Array.prototype.forEach.call($("modes").querySelectorAll(".mode"), function (b) {
+      b.classList.toggle("active", b.getAttribute("data-mode") === mode);
+    });
+    try {
+      localStorage.setItem("mentis-remote-mode", mode);
+    } catch (e) {}
+  }
+  applyMode();
+
+  Array.prototype.forEach.call($("modes").querySelectorAll(".mode"), function (b) {
+    b.addEventListener("click", function () {
+      mode = b.getAttribute("data-mode");
+      applyMode();
+    });
+  });
+
+  // ---- Chemistry joysticks ----
+  // Left stick = absolute position -> move axes (x, z where up = forward).
+  // Right stick = incremental deltas -> look deltas.
+  var stickState = { id: null, ox: 0, oy: 0, radius: 46 };
+
+  function setupStick(el, onDelta, onAxis) {
+    var knob = el.querySelector(".knob");
+    var state = { id: null, ox: 0, oy: 0, px: 0, py: 0 };
+
+    el.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      state.id = e.pointerId;
+      state.ox = e.clientX;
+      state.oy = e.clientY;
+      state.px = e.clientX;
+      state.py = e.clientY;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add("active");
+    });
+
+    el.addEventListener("pointermove", function (e) {
+      if (e.pointerId !== state.id) return;
+      var dx = e.clientX - state.ox;
+      var dy = e.clientY - state.oy;
+      var len = Math.hypot(dx, dy);
+      if (len > stickState.radius) {
+        dx = (dx / len) * stickState.radius;
+        dy = (dy / len) * stickState.radius;
+      }
+      knob.style.transform = "translate(" + dx + "px," + dy + "px)";
+      if (onAxis) {
+        onAxis(dx / stickState.radius, dy / stickState.radius);
+      }
+      if (onDelta) {
+        onDelta(e.clientX - state.px, e.clientY - state.py);
+        state.px = e.clientX;
+        state.py = e.clientY;
+      }
+    });
+
+    function end(e) {
+      if (e.pointerId !== state.id) return;
+      state.id = null;
+      knob.style.transform = "translate(0,0)";
+      el.classList.remove("active");
+      if (onAxis) onAxis(0, 0);
+    }
+    el.addEventListener("pointerup", end);
+    el.addEventListener("pointercancel", end);
+  }
+
+  // Walk stick -> { type: 'move', x, z } (z negative = forward).
+  setupStick($("stickL"), null, function (x, y) {
+    send({ type: "move", x: x, z: y });
+  });
+
+  // Look stick -> { type: 'look', dx, dy } pixel deltas.
+  setupStick($("stickR"), function (dx, dy) {
+    send({ type: "look", dx: dx, dy: dy });
+  }, null);
+
+  // ---- Chemistry action buttons ----
+  function sendKey(code) {
+    if (!paired) return;
+    send({ type: "key", code: code, down: true });
+    setTimeout(function () {
+      send({ type: "key", code: code, down: false });
+    }, 70);
+    debug("key " + code);
+  }
+
+  Array.prototype.forEach.call($("chemLayout").querySelectorAll(".abtn[data-key]"), function (btn) {
+    btn.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      sendKey(btn.getAttribute("data-key"));
+    });
+  });
+
+  // ---- Hold to talk (both layouts) ----
+  var voiceHeld = false;
+  function setVoice(on) {
+    voiceHeld = on;
+    $("voiceBtnChem").classList.toggle("active", on);
+    $("voiceBtn").classList.toggle("active", on);
+    if (paired) send({ type: "voice", down: on });
+  }
+  ["voiceBtn", "voiceBtnChem"].forEach(function (id) {
+    var el = $(id);
+    el.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      setVoice(true);
+    });
+    ["pointerup", "pointercancel"].forEach(function (ev) {
+      el.addEventListener(ev, function (e) {
+        e.preventDefault();
+        setVoice(false);
+      });
+    });
+  });
+
+  // ---- Solar touchpad: swipe to rotate, tap to select ----
   var touch = { id: null, x: 0, y: 0, moved: 0 };
   var zone = $("touchZone");
 
@@ -125,14 +252,13 @@
     touch.x = e.clientX;
     touch.y = e.clientY;
     touch.moved += Math.abs(dx) + Math.abs(dy);
-    send({ type: "look", dx: dx, dy: dy }); // rotate the model
+    send({ type: "look", dx: dx, dy: dy });
   });
 
   function endTouch(e) {
     if (e.pointerId !== touch.id) return;
     touch.id = null;
     if (touch.moved < 8) {
-      // tap = select the planet at the centre of the view
       send({ type: "select" });
     }
   }
@@ -140,16 +266,7 @@
     zone.addEventListener(ev, endTouch);
   });
 
-  // ---- Buttons ----
-  function sendKey(code) {
-    if (!paired) return;
-    send({ type: "key", code: code, down: true });
-    setTimeout(function () {
-      send({ type: "key", code: code, down: false });
-    }, 60);
-    debug("key " + code);
-  }
-
+  // ---- Solar buttons ----
   $("cameraBtn").addEventListener("pointerdown", function (e) {
     e.preventDefault();
     sendKey("KeyC");
@@ -158,24 +275,6 @@
   $("resetBtn").addEventListener("pointerdown", function (e) {
     e.preventDefault();
     sendKey("KeyR");
-  });
-
-  // TALK is hold-to-talk (Spacebar push-to-talk in the solar academy).
-  var voiceHeld = false;
-  function setVoice(on) {
-    voiceHeld = on;
-    $("voiceBtn").classList.toggle("active", on);
-    if (paired) send({ type: "voice", down: on });
-  }
-  $("voiceBtn").addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    setVoice(true);
-  });
-  ["pointerup", "pointercancel"].forEach(function (ev) {
-    $("voiceBtn").addEventListener(ev, function (e) {
-      e.preventDefault();
-      setVoice(false);
-    });
   });
 
   window.onerror = function (msg, src, line) {

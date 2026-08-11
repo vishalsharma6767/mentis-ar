@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useXR } from '@react-three/xr';
 import { Box, Sphere, Cylinder, Text, Float, Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 import { TableItem, Experiment, fillPercent } from '../types';
 import { remoteControl } from '../remote/RemoteBridge';
+import { headState } from '../headset/headRig';
 
 interface LabRoomProps {
   labMode: 'guided' | 'sandbox';
@@ -23,6 +25,7 @@ interface LabRoomProps {
 // WASD WALKING CONTROLS & MOUSE HEAD LOOK FOR 3D NAVIGATION
 function WASDPlayerControls() {
   const { camera, gl } = useThree();
+  const presenting = useXR((s) => s.isPresenting);
   const keys = useRef<{ [key: string]: boolean }>({});
   const isDragging = useRef(false);
   const previousMouse = useRef({ x: 0, y: 0 });
@@ -85,6 +88,11 @@ function WASDPlayerControls() {
   }, [camera, gl]);
 
   useFrame((_, delta) => {
+    // In an immersive VR session the headset tracks the head and XRWalk moves
+    // the player, so desktop look/walk must not touch the camera here.
+    // In split-screen stereo the StereoRig owns the cameras instead.
+    if (presenting || headState.splitActive) return;
+
     const speed = 3.6 * delta;
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     forward.y = 0;

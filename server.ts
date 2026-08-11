@@ -8,7 +8,8 @@ import { attachControlServer, getPairCode, getLanIp, getRecentMessages, getClien
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+// Render / Railway / Fly inject PORT — fall back to 3000 for local dev.
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 

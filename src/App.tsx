@@ -7,12 +7,18 @@ import { NovaAssistant } from './components/LabAssistant';
 import { UIOverlay } from './components/UIOverlay';
 import { DesktopController } from './components/DesktopController';
 import { TableWorkbenchUI } from './components/TableWorkbenchUI';
+import { LabGamepad } from './components/LabGamepad';
+import { LabControlsPanel } from './components/LabControlsPanel';
+import { XRWalk } from './components/XRWalk';
 import { RemoteBridge } from './remote/RemoteBridge';
 import { SolarSystem } from './solar/SolarSystem';
 import { AcademyHUD } from './solar/AcademyHUD';
 import { MRCamera } from './solar/MRCamera';
 import { solarState, solarCmd, resetPlanets } from './solar/solarState';
 import { parseSolarCommand } from './solar/solarCommands';
+import { StereoRig } from './headset/StereoRig';
+import { SplitVRToggle } from './headset/SplitVRToggle';
+import { headState, startHeadTracking, stopHeadTracking, recenter } from './headset/headRig';
 import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage } from './types';
 import { useVoice } from './hooks/useVoice';
 
@@ -22,6 +28,13 @@ export default function App() {
 
   const [world, setWorld] = useState<'chemistry' | 'solar'>('chemistry');
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [splitView, setSplitView] = useState(() => {
+    try {
+      return localStorage.getItem('mentis-split-vr') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [labMode, setLabMode] = useState<'guided' | 'sandbox'>('guided');
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(EXPERIMENTS[0]);
 
@@ -196,7 +209,7 @@ export default function App() {
     if (world === 'solar') {
       speak('Welcome to the Mentis Solar System Academy. The camera will open and the planets will float in your room. Look at a planet to select it, pinch with your hand to grab it, or ask Nova to teach you.');
     } else {
-      speak('Entering chemistry lab room. Use WASD to walk, mouse to look around, and keys 1, 2, 3 for racks.');
+      speak('Entering chemistry lab room. Use WASD to walk, mouse to look around, and keys 1, 2, 3 for racks. A Bluetooth game controller or the phone remote also works — press CONTROLS on screen to see every button.');
     }
   };
 
@@ -206,6 +219,14 @@ export default function App() {
   };
 
   const backToLabs = () => {
+    stopHeadTracking();
+    headState.splitActive = false;
+    setSplitView(false);
+    try {
+      localStorage.setItem('mentis-split-vr', '0');
+    } catch {
+      // ignore
+    }
     setMode('menu');
   };
 
@@ -214,6 +235,35 @@ export default function App() {
     resetPlanets();
     backToLabs();
   };
+
+  // Manual split-screen stereo for Cardboard-style headsets (no WebXR needed).
+  const toggleSplit = useCallback(async () => {
+    if (splitView) {
+      stopHeadTracking();
+      headState.splitActive = false;
+      setSplitView(false);
+      try {
+        localStorage.setItem('mentis-split-vr', '0');
+      } catch {
+        // ignore
+      }
+    } else {
+      const ok = await startHeadTracking();
+      headState.splitActive = true;
+      recenter();
+      setSplitView(true);
+      try {
+        localStorage.setItem('mentis-split-vr', '1');
+      } catch {
+        // ignore
+      }
+      speak(
+        ok
+          ? 'Split screen VR mode on. Hold the phone in the headset and look around. Press the recenter button to reset your view.'
+          : 'Split screen VR mode on, but head tracking was not allowed. Use the right stick to look around.'
+      );
+    }
+  }, [splitView, speak]);
 
   // Follow one-shot camera toggles from the HUD / voice commands.
   useEffect(() => {
@@ -294,6 +344,10 @@ export default function App() {
       else if (e.code === 'KeyN') {
         handleAskNovaAboutTable();
       }
+      // Key V: toggle split-screen stereo
+      else if (e.code === 'KeyV') {
+        toggleSplit();
+      }
       // Spacebar Push-To-Talk
       else if (e.code === 'Space' && !e.repeat && !isListening && isSupported) {
         startListening();
@@ -313,7 +367,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, isSupported, isListening, startListening, stopListening, tableItems]);
+  }, [mode, isSupported, isListening, startListening, stopListening, tableItems, toggleSplit]);
 
   // Solar Academy keyboard shortcuts: Space push-to-talk, C camera toggle,
   // R reset planets.
@@ -328,6 +382,8 @@ export default function App() {
         setCameraEnabled((prev) => !prev);
       } else if (e.code === 'KeyR') {
         resetPlanets();
+      } else if (e.code === 'KeyV') {
+        toggleSplit();
       }
     };
 
@@ -343,7 +399,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, isSupported, isListening, startListening, stopListening]);
+  }, [mode, isSupported, isListening, startListening, stopListening, toggleSplit]);
 
   // Continuous heating simulation: temperature climbs, liquids boil/evaporate,
   // and KMnO₄ thermally decomposes releasing Oxygen gas.
@@ -732,9 +788,44 @@ export default function App() {
     }
   };
 
+  // Scene rendered into each eye of the split-screen stereo view.
+  const renderWorld = (eye: 'left' | 'right') => (
+    <>
+      {world === 'solar' && mode === 'solar' ? (
+        <SolarSystem
+          onSelect={(id) => {
+            if (id) {
+              fetchNovaResponse(
+                `I just selected ${id}. Briefly say the name of this celestial body and one amazing fact about it.`
+              );
+            }
+          }}
+        />
+      ) : (
+        <>
+          <LabRoom
+            labMode={labMode}
+            selectedExperiment={selectedExperiment}
+            tableItems={tableItems}
+            selectedTableItemId={selectedTableItemId}
+            onSelectTableItem={setSelectedTableItemId}
+            onOpenRackMenu={(category) => setActiveRackCategory(category)}
+            isHeating={isHeating}
+            pourState={pourState}
+          />
+
+          <NovaAssistant message={novaMessage} />
+        </>
+      )}
+      <StereoRig eye={eye} clampMode={world === 'solar' ? 'solar' : 'lab'} />
+    </>
+  );
+
   return (
     <div className="w-full h-screen bg-gray-950 overflow-hidden font-sans select-none">
       <RemoteBridge />
+      {mode === 'lab' && <LabGamepad />}
+      {mode === 'lab' && <LabControlsPanel />}
       {cameraEnabled && world === 'solar' && mode === 'solar' && <MRCamera enabled={cameraEnabled} />}
       <UIOverlay
         mode={mode}
@@ -789,69 +880,113 @@ export default function App() {
         />
       )}
 
-      {(mode === 'lab' || mode === 'solar') && <VRButton />}
+      {(mode === 'lab' || mode === 'solar') && (
+        <SplitVRToggle on={splitView} onToggle={toggleSplit} onRecenter={recenter} />
+      )}
 
-      <Canvas
-        dpr={[1, 1.5]}
-        shadows={false}
-        gl={{
-          powerPreference: 'default',
-          antialias: true,
-          alpha: true,
-          failIfMajorPerformanceCaveat: false,
-        }}
-        camera={{ position: [0, 1.8, 3.8], fov: 65 }}
-        onCreated={({ gl }) => {
-          gl.domElement.addEventListener('webglcontextlost', (e) => {
-            e.preventDefault();
-            console.warn('WebGL context lost, preventing default crash...');
-          });
-        }}
-      >
-        <XR>
-          {world === 'solar' && mode === 'solar' ? (
-            <SolarSystem
-              onSelect={(id) => {
-                if (id) {
-                  fetchNovaResponse(
-                    `I just selected ${id}. Briefly say the name of this celestial body and one amazing fact about it.`
-                  );
-                }
+      {(mode === 'lab' || mode === 'solar') && !splitView && <VRButton />}
+
+      {splitView && (mode === 'lab' || mode === 'solar') ? (
+        <div className="flex flex-row w-full h-full">
+          <div className="w-1/2 h-full">
+            <Canvas
+              dpr={[1, 1.25]}
+              shadows={false}
+              gl={{ powerPreference: 'default', antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
+              camera={{ position: [0, 1.8, 3.8], fov: 65 }}
+              onCreated={({ gl }) => {
+                gl.domElement.addEventListener('webglcontextlost', (e) => {
+                  e.preventDefault();
+                  console.warn('WebGL context lost, preventing default crash...');
+                });
               }}
-            />
-          ) : (
-            <>
-              <LabRoom
-                labMode={labMode}
-                selectedExperiment={selectedExperiment}
-                tableItems={tableItems}
-                selectedTableItemId={selectedTableItemId}
-                onSelectTableItem={setSelectedTableItemId}
-                onOpenRackMenu={(category) => setActiveRackCategory(category)}
-                isHeating={isHeating}
-                pourState={pourState}
+            >
+              <XR>{renderWorld('left')}</XR>
+            </Canvas>
+          </div>
+          <div className="w-1/2 h-full">
+            <Canvas
+              dpr={[1, 1.25]}
+              shadows={false}
+              gl={{ powerPreference: 'default', antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
+              camera={{ position: [0, 1.8, 3.8], fov: 65 }}
+              onCreated={({ gl }) => {
+                gl.domElement.addEventListener('webglcontextlost', (e) => {
+                  e.preventDefault();
+                  console.warn('WebGL context lost, preventing default crash...');
+                });
+              }}
+            >
+              <XR>{renderWorld('right')}</XR>
+            </Canvas>
+          </div>
+        </div>
+      ) : (
+        <Canvas
+          dpr={[1, 1.5]}
+          shadows={false}
+          gl={{
+            powerPreference: 'default',
+            antialias: true,
+            alpha: true,
+            failIfMajorPerformanceCaveat: false,
+          }}
+          camera={{ position: [0, 1.8, 3.8], fov: 65 }}
+          onCreated={({ gl }) => {
+            gl.domElement.addEventListener('webglcontextlost', (e) => {
+              e.preventDefault();
+              console.warn('WebGL context lost, preventing default crash...');
+            });
+          }}
+        >
+          <XR>
+            {world === 'solar' && mode === 'solar' ? (
+              <SolarSystem
+                onSelect={(id) => {
+                  if (id) {
+                    fetchNovaResponse(
+                      `I just selected ${id}. Briefly say the name of this celestial body and one amazing fact about it.`
+                    );
+                  }
+                }}
               />
+            ) : (
+              <>
+                <LabRoom
+                  labMode={labMode}
+                  selectedExperiment={selectedExperiment}
+                  tableItems={tableItems}
+                  selectedTableItemId={selectedTableItemId}
+                  onSelectTableItem={setSelectedTableItemId}
+                  onOpenRackMenu={(category) => setActiveRackCategory(category)}
+                  isHeating={isHeating}
+                  pourState={pourState}
+                />
 
-              <NovaAssistant message={novaMessage} />
-            </>
-          )}
+                <NovaAssistant message={novaMessage} />
+              </>
+            )}
 
-          <Controllers />
-          <Hands />
+            <Controllers />
+            <Hands />
 
-          {mode === 'menu' || mode === 'dashboard' ? (
-            <OrbitControls
-              makeDefault
-              minPolarAngle={Math.PI / 4}
-              maxPolarAngle={Math.PI / 2.1}
-              autoRotate
-              autoRotateSpeed={0.5}
-            />
-          ) : mode === 'solar' ? null : (
-            <DesktopController mode={mode as 'menu' | 'countdown' | 'lab'} />
-          )}
-        </XR>
-      </Canvas>
+            {mode === 'menu' || mode === 'dashboard' ? (
+              <OrbitControls
+                makeDefault
+                minPolarAngle={Math.PI / 4}
+                maxPolarAngle={Math.PI / 2.1}
+                autoRotate
+                autoRotateSpeed={0.5}
+              />
+            ) : mode === 'solar' ? null : (
+              <>
+                <DesktopController mode={mode as 'menu' | 'countdown' | 'lab'} />
+                {mode === 'lab' && <XRWalk />}
+              </>
+            )}
+          </XR>
+        </Canvas>
+      )}
     </div>
   );
 }

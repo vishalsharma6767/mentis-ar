@@ -272,7 +272,7 @@ export function TableWorkbenchUI({
           className="px-3 py-1.5 rounded-full text-xs font-bold text-sky-400 bg-sky-950/60 border border-sky-500/30 hover:bg-sky-600 hover:text-white transition-all flex items-center gap-1.5"
         >
           <span className="bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded text-[10px] font-mono">1</span>
-          <span>Glassware Rack</span>
+          <span className="hidden min-[460px]:inline">Glassware Rack</span>
         </button>
 
         <button
@@ -280,7 +280,7 @@ export function TableWorkbenchUI({
           className="px-3 py-1.5 rounded-full text-xs font-bold text-purple-400 bg-purple-950/60 border border-purple-500/30 hover:bg-purple-600 hover:text-white transition-all flex items-center gap-1.5"
         >
           <span className="bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded text-[10px] font-mono">2</span>
-          <span>Chemical Reagents</span>
+          <span className="hidden min-[460px]:inline">Chemical Reagents</span>
         </button>
 
         <button
@@ -288,7 +288,7 @@ export function TableWorkbenchUI({
           className="px-3 py-1.5 rounded-full text-xs font-bold text-orange-400 bg-orange-950/60 border border-orange-500/30 hover:bg-orange-600 hover:text-white transition-all flex items-center gap-1.5"
         >
           <span className="bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded text-[10px] font-mono">3</span>
-          <span>Fire & Tools</span>
+          <span className="hidden min-[460px]:inline">Fire & Tools</span>
         </button>
       </div>
 

@@ -142,6 +142,110 @@ header {
   min-height: 0;
 }
 
+/* ---- Mode switch (chem lab / solar) ---- */
+.modes {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 2px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+}
+
+.modes .mode {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+}
+
+.modes .mode.active {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #fff;
+}
+
+/* ---- Layouts ---- */
+.layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* ---- Chemistry: twin joysticks ---- */
+.stickRow {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.stick {
+  position: relative;
+  flex: 1;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.stick.active {
+  border-color: #6366f1;
+  background: rgba(49, 46, 129, 0.45);
+}
+
+.stick .knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #818cf8, #4338ca);
+  border: 2px solid #a5b4fc;
+  box-shadow: 0 4px 16px rgba(67, 56, 202, 0.5);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.stickLabel {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #a5b4fc;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ---- Chemistry: action buttons ---- */
+.btnGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.btnGrid .abtn {
+  padding: 14px 4px;
+  font-size: 11px;
+}
+
+.btnGrid .abtn.voice {
+  grid-column: span 2;
+}
+
 .zone {
   position: relative;
   flex: 1;

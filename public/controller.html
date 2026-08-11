@@ -7,14 +7,14 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <title>Mentis Academy Remote</title>
-    <link rel="stylesheet" href="/controller.css?v=6" />
+    <link rel="stylesheet" href="/controller.css?v=7" />
   </head>
   <body>
     <div id="app">
       <header>
         <div class="title">
           <span class="dot" id="statusDot"></span>
-          MENTIS SOLAR ACADEMY
+          MENTIS REMOTE
         </div>
         <div id="status" class="status off">OFFLINE</div>
       </header>
@@ -28,18 +28,50 @@
       </div>
 
       <div id="controls" class="controls hidden">
-        <!-- Touchpad: swipe to rotate the system, tap to select a planet -->
-        <div class="zone" id="touchZone">
-          <span class="zoneLabel">DRAG TO ROTATE · TAP TO SELECT</span>
+        <!-- Mode switch: which app is on the big screen -->
+        <div id="modes" class="modes">
+          <button class="mode active" data-mode="chem">CHEM LAB</button>
+          <button class="mode" data-mode="solar">SOLAR</button>
         </div>
-        <div class="actionRow">
-          <button class="abtn cam" id="cameraBtn">CAMERA</button>
-          <button class="abtn reset" id="resetBtn">RESET</button>
-          <button class="abtn voice" id="voiceBtn">🎤 TALK</button>
+
+        <!-- CHEMISTRY LAB: twin joysticks + action buttons -->
+        <div id="chemLayout" class="layout">
+          <div class="stickRow">
+            <div class="stick" id="stickL">
+              <span class="stickLabel">WALK</span>
+              <div class="knob"></div>
+            </div>
+            <div class="stick" id="stickR">
+              <span class="stickLabel">LOOK</span>
+              <div class="knob"></div>
+            </div>
+          </div>
+          <div class="btnGrid">
+            <button class="abtn" data-key="Digit1">GLASS</button>
+            <button class="abtn" data-key="Digit2">CHEMS</button>
+            <button class="abtn" data-key="Digit3">TOOLS</button>
+            <button class="abtn" data-key="KeyP">POUR</button>
+            <button class="abtn" data-key="KeyF">HEAT</button>
+            <button class="abtn" data-key="KeyC">CLEAR</button>
+            <button class="abtn" data-key="KeyN">NOVA</button>
+            <button class="abtn voice" id="voiceBtnChem">🎤 TALK</button>
+          </div>
+        </div>
+
+        <!-- SOLAR ACADEMY: rotate pad + actions -->
+        <div id="solarLayout" class="layout hidden">
+          <div class="zone" id="touchZone">
+            <span class="zoneLabel">DRAG TO ROTATE · TAP TO SELECT</span>
+          </div>
+          <div class="actionRow">
+            <button class="abtn cam" id="cameraBtn">CAMERA</button>
+            <button class="abtn reset" id="resetBtn">RESET</button>
+            <button class="abtn voice" id="voiceBtn">🎤 TALK</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <script src="/controller.js?v=6"></script>
+    <script src="/controller.js?v=7"></script>
   </body>
 </html>

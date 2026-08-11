@@ -123,18 +123,20 @@ export function LabDashboard({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] text-slate-400 font-mono">
-                    <span>WASD — walk around</span>
-                    <span>Mouse — look around</span>
+                    <span>WASD / L-Stick — walk around</span>
+                    <span>Mouse / R-Stick — look around</span>
                     <span>1 / 2 / 3 — open racks</span>
                     <span>Space — talk to Nova</span>
-                    <span>N — Nova voice guide</span>
-                    <span>F — toggle heat · P — pour</span>
+                    <span>N — Nova voice guide · Y — gamepad</span>
+                    <span>F — toggle heat · P — pour · C — clear</span>
+                    <span>Q / E — cycle item · X — remove</span>
+                    <span>Phone remote — scan chip in-lab</span>
                   </div>
                 )}
                 <p className="text-[10px] text-slate-500">
                   {isSolar
                     ? 'Best with the phone in your VR headset — the camera shows your room. Hand tracking also works with the phone out of the headset.'
-                    : 'VR headset supported when connected.'}
+                    : 'Works on desktop, on the phone in your headset, and with any Bluetooth game controller. Press CONTROLS (top-right, in-lab) for the full key list.'}
                 </p>
               </div>
             </div>

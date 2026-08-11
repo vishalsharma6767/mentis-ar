@@ -1,9 +1,12 @@
 import { useFrame, useThree } from '@react-three/fiber';
+import { useXR } from '@react-three/xr';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { headState } from '../headset/headRig';
 
 export function DesktopController({ mode }: { mode: 'menu' | 'countdown' | 'lab' }) {
   const { camera } = useThree();
+  const presenting = useXR((s) => s.isPresenting);
   const keys = useRef<{ [key: string]: boolean }>({});
 
   useEffect(() => {
@@ -26,6 +29,9 @@ export function DesktopController({ mode }: { mode: 'menu' | 'countdown' | 'lab'
 
   useFrame((_, delta) => {
     if (mode !== 'lab') return;
+    // In an active VR session the headset owns the camera — walk via XRWalk.
+    // In split-screen stereo the StereoRig owns the cameras.
+    if (presenting || headState.splitActive) return;
 
     const speed = 4;
     const moveZ = (keys.current['KeyS'] || keys.current['ArrowDown'] ? 1 : 0) - (keys.current['KeyW'] || keys.current['ArrowUp'] ? 1 : 0);

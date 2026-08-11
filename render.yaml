@@ -1,0 +1,16 @@
+# Render blueprint — deploy with:
+#   1. Push this repo to GitHub
+#   2. Render: New -> Blueprint -> pick the repo (this render.yaml is auto-detected)
+#   3. Set env vars (optional): GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY
+# The app runs offline (local tutor) even with no API keys.
+services:
+  - type: web
+    name: mentis-ar
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.cjs
+    healthCheckPath: /api/nova/models
+    envVars:
+      - key: NODE_ENV
+        value: production

@@ -11,11 +11,13 @@ export const remoteControl = {
   tilt: null as { yaw: number; pitch: number } | null,
   connected: false,
   controllerCount: 0,
+  gamepadCount: 0,
+  gamepadName: null as string | null,
 };
 
-const lastKeys: Record<string, boolean> = {};
+export const lastKeys: Record<string, boolean> = {};
 
-function dispatchKey(code: string, down: boolean) {
+export function dispatchKey(code: string, down: boolean) {
   // Derive a proper `key` value too: some handlers (e.g. the rack modal item
   // picker) read e.key (parseInt), not e.code.
   let key = code;
@@ -33,7 +35,11 @@ function dispatchKey(code: string, down: boolean) {
 
 // Convert joystick axes into held WASD key state. Only dispatches on actual
 // state changes so the existing key listeners keep a clean pressed state.
-function applyMove(x: number, z: number) {
+// The raw axes are also stored so the VR walk controller (XRWalk) can move the
+// XR player directly while a headset session is presenting.
+export function applyMove(x: number, z: number) {
+  remoteControl.moveX = x;
+  remoteControl.moveZ = z;
   const want: Record<string, boolean> = {
     KeyW: z < -0.15,
     KeyS: z > 0.15,
