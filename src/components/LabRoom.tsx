@@ -283,7 +283,7 @@ export function LabRoom({
       {/* Photorealistic Clean Hexagonal Tiled Epoxy Floor */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.5} receiveShadow>
         <planeGeometry args={[24, 24]} />
-        <meshStandardMaterial color="#f1f5f9" roughness={0.15} metalness={0.2} />
+        <meshStandardMaterial color="#f5f7fa" roughness={0.15} metalness={0.2} />
       </mesh>
       <gridHelper args={[24, 24, '#cbd5e1', '#e2e8f0']} position={[0, -0.49, 0]} />
 
@@ -577,11 +577,11 @@ export function LabRoom({
       {/* Side Walls */}
       <mesh position={[-12, 4.5, 0]} rotation-y={Math.PI / 2} receiveShadow>
         <boxGeometry args={[24, 10, 0.4]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.4} />
+        <meshStandardMaterial color="#d3e9dd" roughness={0.45} />
       </mesh>
       <mesh position={[12, 4.5, 0]} rotation-y={-Math.PI / 2} receiveShadow>
         <boxGeometry args={[24, 10, 0.4]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.4} />
+        <meshStandardMaterial color="#d3e9dd" roughness={0.45} />
       </mesh>
       <mesh position={[0, 9.5, 0]} rotation-x={Math.PI / 2}>
         <planeGeometry args={[24, 24]} />
@@ -630,8 +630,8 @@ export function LabRoom({
       />
 
       {/* Photorealistic Lighting Setup */}
-      <ambientLight intensity={0.45} color="#ffffff" />
-      <hemisphereLight args={['#f8fafc', '#94a3b8', 0.45]} />
+      <ambientLight intensity={0.55} color="#ffffff" />
+      <hemisphereLight args={['#f8fafc', '#93c5fd', 0.55]} />
       {/* Key sunlight through the window — casts soft real shadows */}
       <directionalLight
         position={[5, 12, 6]}
