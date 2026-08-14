@@ -30,9 +30,10 @@ export function XRWalk() {
 
     player.position.addScaledVector(dir, 2.8 * delta);
 
-    // Keep the user inside the lab room.
-    player.position.x = Math.max(-4.5, Math.min(4.5, player.position.x));
-    player.position.z = Math.max(0.5, Math.min(6.0, player.position.z));
+    // Keep the user inside the lab room (roomier walk range so the user can
+    // approach the wall racks and the control screen).
+    player.position.x = Math.max(-6.0, Math.min(6.0, player.position.x));
+    player.position.z = Math.max(0.4, Math.min(7.5, player.position.z));
   });
 
   return null;

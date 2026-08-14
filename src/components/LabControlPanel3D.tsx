@@ -171,16 +171,16 @@ export function LabControlPanel3D(props: LabControlPanel3DProps) {
   }, []);
 
   const totalRows = Math.max(1, Math.ceil(controls.length / COLS));
-  const screenW = 3.2;
-  const screenH = 0.62 + totalRows * 0.5;
+  const screenW = 3.7;
+  const screenH = 0.78 + totalRows * 0.56;
 
   return (
-    <group position={[3.4, 1.85, -1.9]} rotation-x={-0.05}>
+    <group position={[2.9, 1.9, -1.35]} rotation-x={-0.05}>
       {/* Pedestal stand down to the floor (floor surface sits at y = -0.5). */}
-      <Box args={[0.5, 2.35, 0.34]} position={[0, -1.2, -0.12]}>
+      <Box args={[0.52, 2.4, 0.36]} position={[0, -1.2, -0.12]}>
         <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.6} />
       </Box>
-      <Box args={[0.42, 0.14, 0.5]} position={[0, -2.4, -0.12]}>
+      <Box args={[0.44, 0.16, 0.52]} position={[0, -2.42, -0.12]}>
         <meshStandardMaterial color="#0f172a" roughness={0.6} />
       </Box>
 
@@ -191,15 +191,15 @@ export function LabControlPanel3D(props: LabControlPanel3DProps) {
 
       {/* Screen surface */}
       <mesh position={[0, 0, 0.075]}>
-        <planeGeometry args={[screenW - 0.24, screenH - 0.24]} />
+        <planeGeometry args={[screenW - 0.26, screenH - 0.26]} />
         <meshStandardMaterial color="#020617" roughness={0.25} metalness={0.3} />
       </mesh>
 
       {/* Header */}
-      <Text position={[0, screenH / 2 - 0.17, 0.085]} fontSize={0.15} color="#7dd3fc" anchorX="center">
+      <Text position={[0, screenH / 2 - 0.19, 0.085]} fontSize={0.2} color="#7dd3fc" anchorX="center">
         LAB SCREEN · ALL FUNCTIONS
       </Text>
-      <Text position={[0, -screenH / 2 + 0.13, 0.085]} fontSize={0.08} color="#475569" anchorX="center">
+      <Text position={[0, -screenH / 2 + 0.15, 0.085]} fontSize={0.1} color="#64748b" anchorX="center">
         D-pad move · A select · B back · ray/pointer to press
       </Text>
 
@@ -207,15 +207,15 @@ export function LabControlPanel3D(props: LabControlPanel3DProps) {
       {controls.map((c, idx) => {
         const col = idx % COLS;
         const row = Math.floor(idx / COLS);
-        const btnW = c.sub ? 1.16 : 0.72;
-        const btnH = c.sub ? 0.34 : 0.4;
-        const x = -screenW / 2 + 0.42 + col * ((screenW - 0.84) / COLS);
-        const y = screenH / 2 - 0.42 - (totalRows - 1 - row) * 0.5;
+        const btnW = c.sub ? 1.34 : 0.84;
+        const btnH = c.sub ? 0.4 : 0.46;
+        const x = -screenW / 2 + 0.48 + col * ((screenW - 0.96) / COLS);
+        const y = screenH / 2 - 0.5 - (totalRows - 1 - row) * 0.56;
         const isFocus = idx === focus;
         return (
           <group key={c.id} position={[x, y, 0.085]}>
             {isFocus && (
-              <Box args={[btnW + 0.07, btnH + 0.09, 0.02]} position={[0, 0, 0.005]}>
+              <Box args={[btnW + 0.08, btnH + 0.1, 0.02]} position={[0, 0, 0.005]}>
                 <meshStandardMaterial
                   color="#cffafe"
                   emissive="#22d3ee"
@@ -240,20 +240,20 @@ export function LabControlPanel3D(props: LabControlPanel3DProps) {
               />
             </mesh>
             <Text
-              position={[0, c.sub ? 0.07 : 0, 0.01]}
-              fontSize={c.sub ? 0.12 : 0.16}
+              position={[0, c.sub ? 0.09 : 0, 0.01]}
+              fontSize={c.sub ? 0.15 : 0.2}
               color="#ffffff"
               anchorX="center"
               anchorY="middle"
-              maxWidth={btnW - 0.08}
+              maxWidth={btnW - 0.1}
               letterSpacing={0.6}
             >
               {c.label}
             </Text>
             {c.sub && (
               <Text
-                position={[0, -0.1, 0.01]}
-                fontSize={0.09}
+                position={[0, -0.12, 0.01]}
+                fontSize={0.11}
                 color="#cbd5e1"
                 anchorX="center"
                 anchorY="middle"

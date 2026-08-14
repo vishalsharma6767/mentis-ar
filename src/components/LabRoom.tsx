@@ -113,8 +113,8 @@ function WASDPlayerControls() {
       camera.position.addScaledVector(right, speed);
     }
 
-    camera.position.x = Math.max(-5.0, Math.min(5.0, camera.position.x));
-    camera.position.z = Math.max(0.6, Math.min(7.0, camera.position.z));
+    camera.position.x = Math.max(-6.0, Math.min(6.0, camera.position.x));
+    camera.position.z = Math.max(0.5, Math.min(7.5, camera.position.z));
 
     // Gamepad right-stick look deltas (also driven by drag deltas above).
     if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
@@ -597,6 +597,30 @@ export function LabRoom({
           <meshBasicMaterial color="#ffffff" />
         </Box>
       </group>
+
+      {/* Wall baseboards for a finished, realistic room */}
+      <mesh position={[0, -0.41, -10.06]}>
+        <boxGeometry args={[24, 0.2, 0.12]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[-12.06, -0.41, 0]}>
+        <boxGeometry args={[0.12, 0.2, 24]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[12.06, -0.41, 0]}>
+        <boxGeometry args={[0.12, 0.2, 24]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
+      </mesh>
+
+      {/* Blue work-zone ring on the floor around the chemistry bench */}
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.485}>
+        <ringGeometry args={[3.4, 4.3, 72]} />
+        <meshStandardMaterial color="#0ea5e9" transparent opacity={0.4} roughness={0.3} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.482}>
+        <ringGeometry args={[3.55, 3.6, 72]} />
+        <meshStandardMaterial color="#38bdf8" transparent opacity={0.7} roughness={0.25} />
+      </mesh>
 
       {/* THREE SIDE WALL RACKS FOR EXTRA CATALOG SELECTION */}
       <WallRack

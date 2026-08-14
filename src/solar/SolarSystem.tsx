@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useXR } from '@react-three/xr';
 import { Sphere, Text, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { SOLAR_BODIES, SolarBody, CAMERA_ORIGIN, SYSTEM_SCALE } from './solarData';
@@ -164,6 +165,7 @@ function MoonModel() {
 // ---- main scene ----
 export function SolarSystem({ onSelect }: { onSelect?: (id: string | null) => void }) {
   const { camera, gl } = useThree();
+  const presenting = useXR((s) => s.isPresenting);
   const system = useRef<THREE.Group>(null);
   const rotRef = useRef<THREE.Euler>(new THREE.Euler(0, 0, 0, 'YXZ'));
   const prevHandPinch = useRef(false);
@@ -261,8 +263,9 @@ export function SolarSystem({ onSelect }: { onSelect?: (id: string | null) => vo
       onSelectRef.current?.(id);
     }
 
-    // Phone remote (pairing chip) drives model rotation via look deltas.
-    if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
+    // Gamepad right-stick rotates the model on desktop; in headset VR the same
+    // deltas are consumed by XRLook to rotate your view instead.
+    if (!presenting && (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0)) {
       rotRef.current.y -= remoteControl.lookDx * 0.004;
       rotRef.current.x -= remoteControl.lookDy * 0.003;
       rotRef.current.x = THREE.MathUtils.clamp(rotRef.current.x, -0.6, 0.6);
