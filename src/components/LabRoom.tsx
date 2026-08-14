@@ -652,6 +652,40 @@ export function LabRoom({
         </Box>
       </group>
 
+      {/* Lab corner: table and chair for AI assistant */}
+      <group position={[3.5, 0, -2.5]}>
+        {/* Tabletop */}
+        <Box args={[1.2, 0.05, 0.8]} position={[0, 0.3, 0]}>
+          <meshStandardMaterial color="#e2e8f0" roughness={0.3} />
+        </Box>
+        {/* Table leg 1 */}
+        <Box args={[0.05, 0.6, 0.05]} position={[-0.5, 0.3, 0.35]}>
+          <meshStandardMaterial color="#86efac" roughness={0.4} />
+        </Box>
+        {/* Table leg 2 */}
+        <Box args={[0.05, 0.6, 0.05]} position={[0.5, 0.3, 0.35]}>
+          <meshStandardMaterial color="#86efac" roughness={0.4} />
+        </Box>
+        {/* Table leg 3 */}
+        <Box args={[0.05, 0.6, 0.05]} position={[-0.5, 0.3, -0.35]}>
+          <meshStandardMaterial color="#86efac" roughness={0.4} />
+        </Box>
+        {/* Table leg 4 */}
+        <Box args={[0.05, 0.6, 0.05]} position={[0.5, 0.3, -0.35]}>
+          <meshStandardMaterial color="#86efac" roughness={0.4} />
+        </Box>
+        {/* Chair */}
+        <group position={[0, 0.8, 0.4]}>
+          <Box args={[0.4, 0.8, 0.4]} position={[0, 0, 0]}>
+            <meshStandardMaterial color="#86efac" roughness={0.4} />
+          </Box>
+          {/* Chair back */}
+          <Box args={[0.4, 1.2, 0.05]} position={[0, 0.6, 0.4]}>
+            <meshStandardMaterial color="#1e293b" roughness={0.6} />
+          </Box>
+        </group>
+      </group>
+
       {/* Wall baseboards for a finished, realistic room */}
       <mesh position={[0, -0.41, -15.06]}>
         <boxGeometry args={[24, 0.2, 0.12]} />
@@ -1421,6 +1455,25 @@ function LiquidMeniscus({ color, radius, y }: { color: string; radius: number; y
   );
 }
 
+// Moving surface wave ripple on liquid
+function SurfaceWave({ radius, speed, amplitude, phase }: { radius: number; speed: number; amplitude: number; phase: number }) {
+  const elapsed = performance.now() / 1000;
+  const y = amplitude * Math.sin(elapsed * speed + phase);
+  return (
+    <mesh>
+      <planeGeometry args={[radius * 2, radius * 0.1]} />
+      <meshStandardMaterial
+        color={0xffffff}
+        transparent
+        opacity={0.05}
+        emissive={0x38bdf8}
+        emissiveIntensity={0.5}
+        roughness={0.0}
+      />
+    </mesh>
+  );
+}
+
 // REALISTIC PROPORTIONATED GLASSWARE RENDER FUNCTIONS
 function RenderBeaker({
   item,
@@ -1452,6 +1505,8 @@ function RenderBeaker({
         <meshPhysicalMaterial
           color="#ffffff"
           roughness={0.05}
+          ior={1.45}
+          transmission={0.8}
           clearcoat={0.7}
           clearcoatRoughness={0.12}
           transparent
@@ -1464,6 +1519,8 @@ function RenderBeaker({
         <meshPhysicalMaterial
           color="#ffffff"
           roughness={0.05}
+          ior={1.45}
+          transmission={0.8}
           clearcoat={0.7}
           clearcoatRoughness={0.1}
           transparent
@@ -1473,7 +1530,7 @@ function RenderBeaker({
 
       {/* Pouring Spout on the rim */}
       <Cylinder args={[0.05, 0.035, 0.07, 16]} position={[0.155, 0.455, 0]} rotation-z={-0.5}>
-        <meshPhysicalMaterial color="#ffffff" roughness={0.05} clearcoat={0.7} transparent opacity={0.6} />
+        <meshPhysicalMaterial color="#ffffff" roughness={0.05} ior={1.45} transmission={0.8} clearcoat={0.7} transparent opacity={0.6} />
       </Cylinder>
 
       {/* Vertical glass highlight (specular streak) */}
@@ -1513,7 +1570,7 @@ function RenderBeaker({
       </group>
 
       {/* Realistic Liquid Volume inside Beaker */}
-      {hasLiquid && liqHeight > 0 && (
+{hasLiquid && liqHeight > 0 && (
         <group>
           <Cylinder args={[0.19, 0.18, liqHeight, 32]} position={[0, liqCenter, 0]}>
             <meshStandardMaterial
@@ -1529,14 +1586,14 @@ function RenderBeaker({
             <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
           </Cylinder>
 
-          {/* Curved liquid meniscus surface */}
           <LiquidMeniscus color={liquidColor} radius={0.19} y={liqTop - 0.002} />
 
-          {/* Precipitate sediment settled at the bottom */}
           {item.contents?.precipitate && <PrecipitateLayer color="#bfdbfe" radius={0.16} y={0.045} height={0.05} />}
 
-          {/* 3D Fizzing Bubbles inside liquid during reaction/heating */}
           <FizzingBubblesSystem color={liquidColor} active={isReacting} height={Math.max(0.05, liqHeight * 0.85)} radius={0.16} />
+
+          {/* Moving surface ripple effect */}
+          <SurfaceWave radius={0.19} speed={0.8} amplitude={0.03} phase={0} />
         </group>
       )}
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Canvas } from '@react-three/fiber';
 import { VRButton, XR, Controllers, Hands } from '@react-three/xr';
 import { OrbitControls } from '@react-three/drei';
@@ -16,6 +17,7 @@ import { SolarSystem } from './solar/SolarSystem';
 import { AcademyHUD } from './solar/AcademyHUD';
 import { MRCamera } from './solar/MRCamera';
 import { solarState, solarCmd, resetPlanets } from './solar/solarState';
+import * as THREE from 'three';
 import { parseSolarCommand } from './solar/solarCommands';
 import { labAudio } from './audio/LabAudio';
 import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage, LAB_CATALOG } from './types';
@@ -191,7 +193,7 @@ export default function App() {
     }
   };
 
-  // Controller handling for VR
+// Controller handling for VR
   useEffect(() => {
     let animationFrameId: number;
 
@@ -212,7 +214,7 @@ export default function App() {
     return () => cancelAnimationFrame(animationFrameId);
   }, [mode]);
 
-  const startVR = () => {
+const startVR = () => {
     setCountdown(5);
     setMode('countdown');
     if (world === 'solar') {
@@ -461,6 +463,35 @@ export default function App() {
     progress: number;
   } | null>(null);
 
+  // Ray interaction state from left trigger
+  const [rayTargetId, setRayTargetId] = useState<string | null>(null);
+  const [rayTargetType, setRayTargetType] = useState<'table-item' | 'beaker' | 'equipment' | 'wall-rack' | null>(null);
+  const [rayDistance, setRayDistance] = useState<number>(0);
+  const [showWallHint, setShowWallHint] = useState(false);
+  const [wallHintText, setWallHintText] = useState<string>('');
+
+  // Update wall hint based on ray target
+  useEffect(() => {
+    if (rayTargetType === 'wall-rack' && !rayTargetId) {
+      // Ray is hitting a wall rack with no specific item selected
+      const wallItems = LAB_CATALOG.length;
+      if (wallItems > 0) {
+        setShowWallHint(true);
+        setWallHintText(`Press ${String.fromCharCode(65 + (wallItems - 1))} to open rack or interact`);
+      } else {
+        setShowWallHint(false);
+      }
+    } else {
+      setShowWallHint(false);
+    }
+}, [rayTargetType, rayTargetId]);
+
+  const [rayInteraction, setRayInteraction] = useState<{
+    isActive: boolean;
+    targetId: string | null;
+    targetType: 'wall-rack' | 'table-item' | 'beaker' | 'equipment' | null;
+    hoverProgress: number; // 0 to 1
+  } | null>(null);
   // Add Item from Catalog to Table (Spawn on open table, away from heaters)
   const handleAddItemToTable = (catalogItem: InventoryItem) => {
     const offsetIndex = tableItems.length;
@@ -818,7 +849,7 @@ export default function App() {
     <div className="w-full h-screen bg-gray-950 overflow-hidden font-sans select-none">
       {mode === 'lab' && <LabGamepad mode="lab" />}
       {mode === 'solar' && <LabGamepad mode="solar" />}
-      {mode === 'lab' && <LabControlsPanel />}
+      {mode === 'lab' && <LabControlsPanel onCloseMic={stopListening} />}
       {cameraEnabled && world === 'solar' && mode === 'solar' && <MRCamera enabled={cameraEnabled} />}
       <UIOverlay
         mode={mode}
@@ -875,6 +906,14 @@ export default function App() {
       )}
 
       {(mode === 'lab' || mode === 'solar') && <VRButton />}
+
+      {showWallHint && (
+        <div
+          className="fixed top-3 left-1/2 -translate-x-1/2 z-[70] pointer-events-auto bg-slate-900/90 border border-sky-500/40 rounded-full px-4 py-2 text-[11px] font-bold text-sky-300 shadow-2xl backdrop-blur-xl"
+        >
+          {wallHintText}
+        </div>
+      )}
 
       <Canvas
           dpr={[1, 1.5]}
@@ -950,7 +989,7 @@ export default function App() {
                   items={actionSegment}
                 />
 
-                <NovaAssistant message={novaMessage} />
+                <NovaAssistant message={novaMessage} position={[3.5, 1.2, -2.5]} />
               </>
             )}
 

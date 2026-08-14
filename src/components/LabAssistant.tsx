@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export function NovaAssistant({ message }: { message?: string }) {
+export function NovaAssistant({ message, position }: { message?: string; position?: [number, number, number] }) {
   const headRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const ringRef2 = useRef<THREE.Mesh>(null);
@@ -21,8 +21,10 @@ export function NovaAssistant({ message }: { message?: string }) {
     }
   });
 
+  const pos = position ?? [2.4, 0, 0.4];
+
   return (
-    <group position={[2.4, 0, 0.4]}>
+    <group position={pos}>
       {/* Sleek Blue Metallic Tripod Base */}
       <group position={[0, 0, 0]}>
         {/* Feet */}

@@ -179,6 +179,9 @@ export interface InventoryItem {
   type: string;
   color?: string;
   formula?: string;
+  glassIOR?: number;
+  glassThickness?: number;
+  liquidSSR?: boolean;
 }
 
 export const LAB_CATALOG: InventoryItem[] = [

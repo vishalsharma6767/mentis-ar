@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { applyMove, dispatchKey, remoteControl } from '../gamepad/gamepadInput';
 import { segmentNav } from '../gamepad/segmentNav';
 import { solarCmd } from '../solar/solarState';
+import * as THREE from 'three';
 
 // Standard gamepad mapping (navigator.getGamepads):
 //   buttons: 0=A 1=B 2=X 3=Y 4=LB 5=RB 6=LT 7=RT 8=Select 9=Start 16=Home
@@ -124,8 +125,13 @@ export function LabGamepad({ mode }: { mode: 'lab' | 'solar' }) {
         prev.current[9] = b(9);
         prev.current[16] = b(16);
 
-        // LT = remove selected item.
-        if (edge(6)) tap('KeyX');
+        // LT = Left trigger: In VR, this can be used for ray interaction.
+        // On desktop, map to Remove item (X key).
+        if (edge(6)) {
+          // LT pressed - could be used for ray start in VR
+          // On desktop, map to Remove item
+          tap('KeyX');
+        }
         prev.current[6] = b(6);
 
         // RT / RB / LB hold = push-to-talk (Space).

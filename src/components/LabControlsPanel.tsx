@@ -31,6 +31,7 @@ const KEYBOARD_ROWS = [
   { keys: <><Kbd>C</Kbd></>, label: 'Clear table' },
   { keys: <><Kbd>N</Kbd></>, label: 'Ask Nova' },
   { keys: <><Kbd>Space</Kbd> (hold)</>, label: 'Talk to Nova' },
+  { keys: <><Kbd>M</Kbd></>, label: 'Close Mic' },
 ];
 
 const GAMEPAD_ROWS = [
@@ -48,6 +49,7 @@ const GAMEPAD_ROWS = [
   { keys: <><Kbd>Home</Kbd></>, label: 'Recenter view' },
   { keys: <><Kbd>LT</Kbd></>, label: 'Remove item' },
   { keys: <><Kbd>RT</Kbd><Kbd>RB</Kbd><Kbd>LB</Kbd> (hold)</>, label: 'Talk to Nova' },
+  { keys: <><Kbd>M</Kbd></>, label: 'Close Mic' },
 ];
 
 function Section({
@@ -76,7 +78,7 @@ function Section({
   );
 }
 
-export function LabControlsPanel() {
+export function LabControlsPanel({ onCloseMic }: { onCloseMic: () => void }) {
   const [open, setOpen] = useState(false);
   const [, tick] = useState(0);
 
