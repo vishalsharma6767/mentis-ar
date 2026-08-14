@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { applyMove, dispatchKey, remoteControl, gamepadUi } from '../gamepad/gamepadInput';
+import { applyMove, dispatchKey, remoteControl } from '../gamepad/gamepadInput';
+import { segmentNav } from '../gamepad/segmentNav';
 import { solarCmd } from '../solar/solarState';
 
 // Standard gamepad mapping (navigator.getGamepads):
@@ -81,28 +82,30 @@ export function LabGamepad({ mode }: { mode: 'lab' | 'solar' }) {
         const buttons = found.buttons || [];
         const b = (i: number) => !!buttons[i]?.pressed;
         const edge = (i: number) => b(i) && !prev.current[i];
-        const ui = gamepadUi();
+        const hasSegs = segmentNav.count > 0;
 
-        // D-pad -> move the 3D wall-panel focus, or cycle table items on desktop.
+        // D-pad -> move across / inside the wall segments, or cycle table items
+        // on desktop when no wall segments are mounted.
         for (const [idx, dir] of DPAD) {
           if (edge(idx)) {
-            if (ui) ui.move(dir);
+            if (hasSegs) segmentNav.move(dir);
             else if (dir === 'left') tap('KeyQ');
             else if (dir === 'right') tap('KeyE');
           }
           prev.current[idx] = b(idx);
         }
 
-        // A = confirm / select (panel focus, or planet in the academy).
+        // A = confirm / activate the focused wall pill (or planet in the
+        // academy; on a plain desktop the pill is triggered by pointer).
         if (edge(0)) {
-          if (ui) ui.activate();
+          if (hasSegs) segmentNav.activate();
           else if (mode === 'solar') solarCmd.select += 1;
         }
         prev.current[0] = b(0);
 
-        // B = back (close rack / cancel) when the panel is focused, else Tools rack.
+        // B = back through wall segments (or Tools rack on a bare desktop).
         if (edge(1)) {
-          if (ui) ui.back();
+          if (hasSegs) segmentNav.back();
           else tap('Digit3');
         }
         prev.current[1] = b(1);

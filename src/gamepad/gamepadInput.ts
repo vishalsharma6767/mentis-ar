@@ -50,20 +50,5 @@ export function applyMove(x: number, z: number) {
   });
 }
 
-// In-lab 3D wall panel navigation: the gamepad D-pad moves a focus highlight,
-// A activates the focused target and B goes back. LabControlPanel3D registers
-// a live accessor here while mounted so LabGamepad can route those buttons to
-// it (an accessor captures up-to-date closures every frame).
-export type UiNav = {
-  move: (dir: 'up' | 'down' | 'left' | 'right') => void;
-  activate: () => void;
-  back: () => void;
-};
-type UiNavAccessor = () => UiNav | null;
-let uiNav: UiNavAccessor | null = null;
-export function onGamepadUi(fn: UiNavAccessor | null) {
-  uiNav = fn;
-}
-export function gamepadUi(): UiNav | null {
-  return uiNav ? uiNav() : null;
-}
+// In-lab 3D wall panel navigation lives in segmentNav.ts (wall segments spread
+// across the room); the gamepad D-pad/A/B are routed there by LabGamepad.

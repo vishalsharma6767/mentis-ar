@@ -103,7 +103,7 @@ export function UIOverlay({
                   : 'No Bluetooth gamepad yet'}
               </span>
               <span className="text-[10px] font-bold text-slate-400">
-                Left stick walk · Right stick look · X / Y / B racks · A confirm · D-pad select
+                Left stick walk · Right stick look · racks & actions on the walls · ray or D-pad to press
               </span>
             </div>
           </motion.div>

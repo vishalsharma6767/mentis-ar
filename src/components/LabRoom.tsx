@@ -113,8 +113,8 @@ function WASDPlayerControls() {
       camera.position.addScaledVector(right, speed);
     }
 
-    camera.position.x = Math.max(-6.0, Math.min(6.0, camera.position.x));
-    camera.position.z = Math.max(0.5, Math.min(7.5, camera.position.z));
+    camera.position.x = Math.max(-8.0, Math.min(8.0, camera.position.x));
+    camera.position.z = Math.max(-5.0, Math.min(10.0, camera.position.z));
 
     // Gamepad right-stick look deltas (also driven by drag deltas above).
     if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
@@ -282,28 +282,28 @@ export function LabRoom({
 
       {/* Photorealistic Clean Hexagonal Tiled Epoxy Floor */}
       <mesh rotation-x={-Math.PI / 2} position-y={-0.5} receiveShadow>
-        <planeGeometry args={[24, 24]} />
+        <planeGeometry args={[24, 30]} />
         <meshStandardMaterial color="#f5f7fa" roughness={0.15} metalness={0.2} />
       </mesh>
       <gridHelper args={[24, 24, '#cbd5e1', '#e2e8f0']} position={[0, -0.49, 0]} />
 
       {/* SOLID ENCLOSED ROOM WALLS & WINDOWS */}
-      <group position={[0, 0, -10]}>
+      <group position={[0, 0, -15]}>
         <mesh position={[-7, 4.5, 0]}>
           <boxGeometry args={[10, 10, 0.4]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
         </mesh>
         <mesh position={[7, 4.5, 0]}>
           <boxGeometry args={[10, 10, 0.4]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
         </mesh>
         <mesh position={[0, 8.5, 0]}>
           <boxGeometry args={[24, 2, 0.4]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
         </mesh>
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[24, 2, 0.4]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
         </mesh>
 
         <Box args={[0.15, 6, 0.5]} position={[-2, 4.5, 0]}>
@@ -364,6 +364,60 @@ export function LabRoom({
           </Text>
         </group>
       </group>
+
+      {/* FRONT WALL (encloses the room lengthwise) */}
+      <group position={[0, 0, 15]}>
+        <mesh position={[-7, 4.5, 0]}>
+          <boxGeometry args={[10, 10, 0.4]} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
+        </mesh>
+        <mesh position={[7, 4.5, 0]}>
+          <boxGeometry args={[10, 10, 0.4]} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 8.5, 0]}>
+          <boxGeometry args={[24, 2, 0.4]} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 0.5, 0]}>
+          <boxGeometry args={[24, 2, 0.4]} />
+          <meshStandardMaterial color="#dbe6f4" roughness={0.4} />
+        </mesh>
+      </group>
+
+      {/* REALISTIC WALL WAINSCOT: deep-teal lower band + trim on every wall */}
+      <mesh position={[0, 0.2, -14.7]}>
+        <boxGeometry args={[24, 1.4, 0.12]} />
+        <meshStandardMaterial color="#0e7490" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.95, -14.7]}>
+        <boxGeometry args={[24, 0.1, 0.14]} />
+        <meshStandardMaterial color="#155e75" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, 0.2, 14.7]}>
+        <boxGeometry args={[24, 1.4, 0.12]} />
+        <meshStandardMaterial color="#0e7490" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.95, 14.7]}>
+        <boxGeometry args={[24, 0.1, 0.14]} />
+        <meshStandardMaterial color="#155e75" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[-11.7, 0.2, 0]}>
+        <boxGeometry args={[0.12, 1.4, 30]} />
+        <meshStandardMaterial color="#0e7490" roughness={0.6} />
+      </mesh>
+      <mesh position={[-11.7, 0.95, 0]}>
+        <boxGeometry args={[0.14, 0.1, 30]} />
+        <meshStandardMaterial color="#155e75" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[11.7, 0.2, 0]}>
+        <boxGeometry args={[0.12, 1.4, 30]} />
+        <meshStandardMaterial color="#0e7490" roughness={0.6} />
+      </mesh>
+      <mesh position={[11.7, 0.95, 0]}>
+        <boxGeometry args={[0.14, 0.1, 30]} />
+        <meshStandardMaterial color="#155e75" roughness={0.6} metalness={0.3} />
+      </mesh>
 
       {/* LEFT CORNER 1: PROFESSIONAL TOXIC FUME HOOD (FLOOR LEVEL Y = -0.5) */}
       <group position={[-4.2, -0.5, -2.2]} rotation={[0, Math.PI / 5, 0]}>
@@ -576,16 +630,16 @@ export function LabRoom({
 
       {/* Side Walls */}
       <mesh position={[-12, 4.5, 0]} rotation-y={Math.PI / 2} receiveShadow>
-        <boxGeometry args={[24, 10, 0.4]} />
-        <meshStandardMaterial color="#d3e9dd" roughness={0.45} />
+        <boxGeometry args={[30, 10, 0.4]} />
+        <meshStandardMaterial color="#cfeadf" roughness={0.45} />
       </mesh>
       <mesh position={[12, 4.5, 0]} rotation-y={-Math.PI / 2} receiveShadow>
-        <boxGeometry args={[24, 10, 0.4]} />
-        <meshStandardMaterial color="#d3e9dd" roughness={0.45} />
+        <boxGeometry args={[30, 10, 0.4]} />
+        <meshStandardMaterial color="#cfeadf" roughness={0.45} />
       </mesh>
       <mesh position={[0, 9.5, 0]} rotation-x={Math.PI / 2}>
-        <planeGeometry args={[24, 24]} />
-        <meshStandardMaterial color="#f1f5f9" roughness={0.8} />
+        <planeGeometry args={[24, 30]} />
+        <meshStandardMaterial color="#eef2f6" roughness={0.8} />
       </mesh>
 
       {/* Ceiling Fluorescent Light Strips */}
@@ -599,16 +653,20 @@ export function LabRoom({
       </group>
 
       {/* Wall baseboards for a finished, realistic room */}
-      <mesh position={[0, -0.41, -10.06]}>
+      <mesh position={[0, -0.41, -15.06]}>
+        <boxGeometry args={[24, 0.2, 0.12]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
+      </mesh>
+      <mesh position={[0, -0.41, 15.06]}>
         <boxGeometry args={[24, 0.2, 0.12]} />
         <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
       </mesh>
       <mesh position={[-12.06, -0.41, 0]}>
-        <boxGeometry args={[0.12, 0.2, 24]} />
+        <boxGeometry args={[0.12, 0.2, 30]} />
         <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
       </mesh>
       <mesh position={[12.06, -0.41, 0]}>
-        <boxGeometry args={[0.12, 0.2, 24]} />
+        <boxGeometry args={[0.12, 0.2, 30]} />
         <meshStandardMaterial color="#94a3b8" roughness={0.6} metalness={0.3} />
       </mesh>
 

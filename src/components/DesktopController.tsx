@@ -44,9 +44,9 @@ export function DesktopController({ mode }: { mode: 'menu' | 'countdown' | 'lab'
       camera.position.addScaledVector(direction, speed * delta);
     }
 
-    // Strictly Clamp camera position within solid room bounds (13m x 13m x 1.6m eye level)
-    camera.position.x = Math.max(-12, Math.min(12, camera.position.x));
-    camera.position.z = Math.max(-12, Math.min(12, camera.position.z));
+    // Strictly Clamp camera position within the solid room bounds (24 x 30 room)
+    camera.position.x = Math.max(-11, Math.min(11, camera.position.x));
+    camera.position.z = Math.max(-14, Math.min(14, camera.position.z));
     camera.position.y = 1.6; // Fixed human eye height
   });
 

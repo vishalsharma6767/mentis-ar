@@ -9,7 +9,7 @@ import { DesktopController } from './components/DesktopController';
 import { TableWorkbenchUI } from './components/TableWorkbenchUI';
 import { LabGamepad } from './components/LabGamepad';
 import { LabControlsPanel } from './components/LabControlsPanel';
-import { LabControlPanel3D } from './components/LabControlPanel3D';
+import { LabWallSegment, WallSegmentItem } from './components/LabWallSegment';
 import { XRWalk } from './components/XRWalk';
 import { XRLook } from './components/XRLook';
 import { SolarSystem } from './solar/SolarSystem';
@@ -18,7 +18,7 @@ import { MRCamera } from './solar/MRCamera';
 import { solarState, solarCmd, resetPlanets } from './solar/solarState';
 import { parseSolarCommand } from './solar/solarCommands';
 import { labAudio } from './audio/LabAudio';
-import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage } from './types';
+import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage, LAB_CATALOG } from './types';
 import { useVoice } from './hooks/useVoice';
 
 export default function App() {
@@ -754,6 +754,64 @@ export default function App() {
     }
   };
 
+  // Wall segments: each wall of the lab hosts one rack/action board. Items are
+  // built here so the actions reach App's state handlers directly.
+  const segmentFor = (cat: 'glassware' | 'chemicals' | 'equipment'): WallSegmentItem[] =>
+    LAB_CATALOG.filter((i) => i.category === cat).map((i) => ({
+      id: i.id,
+      label: i.name,
+      sub: i.formula,
+      color: i.color || '#38bdf8',
+      action: () => handleAddItemToTable(i),
+    }));
+
+  const actionSegment: WallSegmentItem[] = [
+    {
+      id: 'act:pour',
+      label: 'POUR',
+      color: '#22c55e',
+      action: () => {
+        if (tableItems.length >= 2) {
+          handleMixChemicals(tableItems[0].instanceId, tableItems[1].instanceId);
+        } else {
+          speak('Need at least two items on the table to pour between.');
+        }
+      },
+    },
+    {
+      id: 'act:heat',
+      label: isHeating ? 'HEAT ON' : 'HEAT',
+      color: isHeating ? '#b91c1c' : '#ef4444',
+      action: () => setIsHeating((h) => !h),
+    },
+    {
+      id: 'act:clear',
+      label: 'CLEAR',
+      color: '#e11d48',
+      action: () => handleClearTable(),
+    },
+    {
+      id: 'act:remove',
+      label: 'REMOVE',
+      color: '#f97316',
+      action: () => {
+        if (selectedTableItemId) {
+          setTableItems((prev) => prev.filter((i) => i.instanceId !== selectedTableItemId));
+          setSelectedTableItemId(null);
+          speak('Item removed.');
+        } else {
+          speak('Select an item on the table first.');
+        }
+      },
+    },
+    {
+      id: 'act:nova',
+      label: 'NOVA',
+      color: '#8b5cf6',
+      action: () => handleAskNovaAboutTable(),
+    },
+  ];
+
   // Scene inside the single WebXR canvas. Immersive VR sessions render through
   // the headset; the same scene works on a desktop monitor.
   return (
@@ -859,18 +917,37 @@ export default function App() {
                   pourState={pourState}
                 />
 
-                <LabControlPanel3D
-                  tableItems={tableItems}
-                  isHeating={isHeating}
-                  selectedTableItemId={selectedTableItemId}
-                  onSelectTableItem={setSelectedTableItemId}
-                  onAddItemToTable={handleAddItemToTable}
-                  onRemoveTableItem={(id) => setTableItems((prev) => prev.filter((i) => i.instanceId !== id))}
-                  onClearTable={handleClearTable}
-                  onMixChemicals={handleMixChemicals}
-                  onToggleHeating={() => setIsHeating(!isHeating)}
-                  onAskNovaAboutTable={handleAskNovaAboutTable}
-                  speak={speak}
+                <LabWallSegment
+                  id="seg:glass"
+                  position={[-11.5, 2.4, -1.4]}
+                  rotation={[0, Math.PI / 2, 0]}
+                  title="GLASSWARE RACK"
+                  accent="#0284c7"
+                  items={segmentFor('glassware')}
+                />
+                <LabWallSegment
+                  id="seg:chems"
+                  position={[11.5, 2.4, -1.4]}
+                  rotation={[0, -Math.PI / 2, 0]}
+                  title="CHEMICALS RACK"
+                  accent="#a855f7"
+                  items={segmentFor('chemicals')}
+                />
+                <LabWallSegment
+                  id="seg:tools"
+                  position={[-11.5, 2.4, -4.6]}
+                  rotation={[0, Math.PI / 2, 0]}
+                  title="EQUIPMENT RACK"
+                  accent="#f59e0b"
+                  items={segmentFor('equipment')}
+                />
+                <LabWallSegment
+                  id="seg:actions"
+                  position={[11.5, 2.4, -4.6]}
+                  rotation={[0, -Math.PI / 2, 0]}
+                  title="LAB ACTIONS"
+                  accent="#22c55e"
+                  items={actionSegment}
                 />
 
                 <NovaAssistant message={novaMessage} />
