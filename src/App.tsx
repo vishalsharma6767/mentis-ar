@@ -9,6 +9,7 @@ import { DesktopController } from './components/DesktopController';
 import { TableWorkbenchUI } from './components/TableWorkbenchUI';
 import { LabGamepad } from './components/LabGamepad';
 import { LabControlsPanel } from './components/LabControlsPanel';
+import { LabControlPanel3D } from './components/LabControlPanel3D';
 import { XRWalk } from './components/XRWalk';
 import { XRLook } from './components/XRLook';
 import { SolarSystem } from './solar/SolarSystem';
@@ -856,6 +857,20 @@ export default function App() {
                   onOpenRackMenu={(category) => setActiveRackCategory(category)}
                   isHeating={isHeating}
                   pourState={pourState}
+                />
+
+                <LabControlPanel3D
+                  tableItems={tableItems}
+                  isHeating={isHeating}
+                  selectedTableItemId={selectedTableItemId}
+                  onSelectTableItem={setSelectedTableItemId}
+                  onAddItemToTable={handleAddItemToTable}
+                  onRemoveTableItem={(id) => setTableItems((prev) => prev.filter((i) => i.instanceId !== id))}
+                  onClearTable={handleClearTable}
+                  onMixChemicals={handleMixChemicals}
+                  onToggleHeating={() => setIsHeating(!isHeating)}
+                  onAskNovaAboutTable={handleAskNovaAboutTable}
+                  speak={speak}
                 />
 
                 <NovaAssistant message={novaMessage} />
