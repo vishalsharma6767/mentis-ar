@@ -4,8 +4,7 @@ import { useXR } from '@react-three/xr';
 import { Box, Sphere, Cylinder, Text, Float, Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 import { TableItem, Experiment, fillPercent } from '../types';
-import { remoteControl } from '../remote/RemoteBridge';
-import { headState } from '../headset/headRig';
+import { remoteControl } from '../gamepad/gamepadInput';
 
 interface LabRoomProps {
   labMode: 'guided' | 'sandbox';
@@ -90,8 +89,7 @@ function WASDPlayerControls() {
   useFrame((_, delta) => {
     // In an immersive VR session the headset tracks the head and XRWalk moves
     // the player, so desktop look/walk must not touch the camera here.
-    // In split-screen stereo the StereoRig owns the cameras instead.
-    if (presenting || headState.splitActive) return;
+    if (presenting) return;
 
     const speed = 3.6 * delta;
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -118,13 +116,8 @@ function WASDPlayerControls() {
     camera.position.x = Math.max(-5.0, Math.min(5.0, camera.position.x));
     camera.position.z = Math.max(0.6, Math.min(7.0, camera.position.z));
 
-    // Phone controller look: absolute gyro tilt takes precedence over drag deltas.
-    if (remoteControl.tilt) {
-      euler.current.y = remoteControl.tilt.yaw;
-      euler.current.x = Math.max(-Math.PI / 2.8, Math.min(Math.PI / 2.8, remoteControl.tilt.pitch));
-      euler.current.z = 0;
-      camera.quaternion.setFromEuler(euler.current);
-    } else if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
+    // Gamepad right-stick look deltas (also driven by drag deltas above).
+    if (remoteControl.lookDx !== 0 || remoteControl.lookDy !== 0) {
       const sensitivity = 0.0035;
       euler.current.y -= remoteControl.lookDx * sensitivity;
       euler.current.x -= remoteControl.lookDy * sensitivity;

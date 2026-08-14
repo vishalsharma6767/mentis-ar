@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useXR } from '@react-three/xr';
 import * as THREE from 'three';
-import { remoteControl } from '../remote/RemoteBridge';
+import { remoteControl } from '../gamepad/gamepadInput';
 
 // Moves the XR player (not the camera) so walking works while a headset
 // session is presenting. In immersive VR the headset controls the camera

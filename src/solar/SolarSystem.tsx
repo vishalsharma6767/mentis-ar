@@ -4,7 +4,7 @@ import { Sphere, Text, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { SOLAR_BODIES, SolarBody, CAMERA_ORIGIN, SYSTEM_SCALE } from './solarData';
 import { solarState, solarCmd, resetPlanets } from './solarState';
-import { remoteControl } from '../remote/RemoteBridge';
+import { remoteControl } from '../gamepad/gamepadInput';
 
 const FONT =
   'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyeMZhrib2Bg-4.ttf';

@@ -7,12 +7,10 @@ import {
   RotateCcw,
   Languages,
   Brain,
-  Smartphone,
-  X
+  Gamepad2,
 } from 'lucide-react';
 import { Experiment, EXPERIMENTS, NovaLanguage, NovaModelInfo } from '../types';
-import { QRCodeSVG } from 'qrcode.react';
-import { remoteControl } from '../remote/RemoteBridge';
+import { remoteControl } from '../gamepad/gamepadInput';
 import { LandingPage } from './LandingPage';
 import { LabDashboard } from './LabDashboard';
 
@@ -59,16 +57,7 @@ export function UIOverlay({
   onAskNovaGuide,
   onResetExperimentEquipment,
 }: UIOverlayProps) {
-  const [pairInfo, setPairInfo] = useState<{ code: string; ip: string | null; port: number } | null>(null);
-  const [showPairChip, setShowPairChip] = useState(true);
   const [, forceTick] = useState(0);
-
-  useEffect(() => {
-    fetch('/api/control/info')
-      .then((r) => r.json())
-      .then((d) => setPairInfo(d))
-      .catch(() => {});
-  }, []);
 
   // Poll the shared bridge state so the chip shows live link status.
   useEffect(() => {
@@ -76,62 +65,27 @@ export function UIOverlay({
     return () => clearInterval(id);
   }, []);
 
-  // Phone controller chip appears in the lab, its dashboard and the academy —
-  // any active 3D world that accepts remote input.
+  // Gamepad status chip appears in the lab, its dashboard and the academy.
   const showPhoneController = mode === 'dashboard' || mode === 'lab' || mode === 'solar';
-  const phoneLabel = world === 'solar' ? 'Scan to open the academy remote' : 'Scan to open the lab remote';
-  // On localhost the phone needs the LAN IP; on a public deploy the deployed
-  // origin is already correct (and must keep its https:// + real port).
-  const isLocalHost =
-    typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname);
-  const controllerBase = isLocalHost
-    ? `http://${pairInfo?.ip || location.hostname}:${pairInfo?.port || location.port}`
-    : location.origin;
 
   return (
     <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-6">
-      {/* Bottom Left - Phone Controller Pairing Chip (drone lab only, dismissible) */}
-      {showPairChip && pairInfo && showPhoneController && (
+      {/* Bottom Left - Bluetooth Gamepad Status Chip */}
+      {showPhoneController && (
         <div className="absolute bottom-6 left-6 pointer-events-auto z-20">
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-slate-900/90 border border-emerald-500/30 backdrop-blur-xl rounded-2xl shadow-xl p-3 flex items-center gap-3"
+            className="bg-slate-900/90 border border-emerald-500/30 backdrop-blur-xl rounded-2xl shadow-xl p-3 flex items-center gap-2.5"
           >
-            <div className="bg-white rounded-lg p-1 shrink-0">
-              <QRCodeSVG
-                value={`${controllerBase}/controller?code=${pairInfo.code}`}
-                size={72}
-                level="M"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
+            <Gamepad2
+              className={`w-5 h-5 shrink-0 ${
+                remoteControl.gamepadCount > 0 ? 'text-emerald-400' : 'text-slate-500'
+              }`}
+            />
+            <div className="flex flex-col gap-0.5">
               <span
-                className={`flex items-center gap-1.5 text-[10px] font-bold rounded-lg px-1.5 py-0.5 ${
-                  remoteControl.connected && remoteControl.controllerCount > 0
-                    ? 'bg-emerald-500/15 text-emerald-300'
-                    : 'bg-slate-800/80 text-slate-400'
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${
-                    remoteControl.connected && remoteControl.controllerCount > 0
-                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
-                      : 'bg-red-500'
-                  }`}
-                />
-                {remoteControl.connected && remoteControl.controllerCount > 0
-                  ? `Phone connected${remoteControl.controllerCount > 1 ? ` (${remoteControl.controllerCount})` : ''}`
-                  : remoteControl.connected
-                    ? 'Lab linked — waiting for phone...'
-                    : 'Lab NOT linked — reload this tab'}
-              </span>
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                {phoneLabel}
-              </span>
-              <span
-                className={`flex items-center gap-1.5 text-[10px] font-bold rounded-lg px-1.5 py-0.5 ${
+                className={`flex items-center gap-1.5 text-[11px] font-bold rounded-lg px-1.5 py-0.5 ${
                   remoteControl.gamepadCount > 0
                     ? 'bg-emerald-500/15 text-emerald-300'
                     : 'bg-slate-800/80 text-slate-400'
@@ -139,25 +93,19 @@ export function UIOverlay({
               >
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${
-                    remoteControl.gamepadCount > 0 ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]' : 'bg-red-500'
+                    remoteControl.gamepadCount > 0
+                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]'
+                      : 'bg-red-500'
                   }`}
                 />
-                {remoteControl.gamepadCount > 0 ? 'Bluetooth gamepad connected' : 'No Bluetooth gamepad yet'}
+                {remoteControl.gamepadCount > 0
+                  ? `Gamepad connected: ${remoteControl.gamepadName || 'active'}`
+                  : 'No Bluetooth gamepad yet'}
               </span>
               <span className="text-[10px] font-bold text-slate-400">
-                Code: <span className="text-sky-300 font-mono tracking-widest text-[13px]">{pairInfo.code}</span>
-              </span>
-              <span className="text-[9px] font-mono text-slate-500">
-                {controllerBase}/controller
+                Left stick walk · Right stick look · X / Y / B racks · A confirm · D-pad select
               </span>
             </div>
-            <button
-              onClick={() => setShowPairChip(false)}
-              className="self-start p-1 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
-              title="Hide controller info"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
           </motion.div>
         </div>
       )}

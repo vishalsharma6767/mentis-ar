@@ -1,24 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { applyMove, dispatchKey, remoteControl } from '../remote/RemoteBridge';
+import { applyMove, dispatchKey, remoteControl, gamepadUi } from '../gamepad/gamepadInput';
+import { solarCmd } from '../solar/solarState';
 
 // Standard gamepad mapping (navigator.getGamepads):
-//   buttons: 0=A 1=B 2=X 3=Y 4=LB 5=RB 6=LT 7=RT 8=Select 9=Start 12-15=D-pad
+//   buttons: 0=A 1=B 2=X 3=Y 4=LB 5=RB 6=LT 7=RT 8=Select 9=Start 16=Home
+//            12/13/14/15 = D-pad Up/Right/Down/Left
 //   axes:    0/1 = left stick, 2/3 = right stick (up = -1 on vertical axes)
-const TAP_BUTTONS: Array<{ index: number; label: string; code: string }> = [
-  { index: 0, label: 'A', code: 'Digit1' }, // glassware rack
-  { index: 1, label: 'B', code: 'Digit2' }, // chemicals rack
-  { index: 2, label: 'X', code: 'Digit3' }, // fire & tools rack
-  { index: 3, label: 'Y', code: 'KeyN' }, // ask Nova
-  { index: 4, label: 'LB', code: 'KeyF' }, // toggle heat
-  { index: 5, label: 'RB', code: 'KeyP' }, // pour / mix
-  { index: 6, label: 'LT', code: 'KeyX' }, // remove selected
-  { index: 8, label: 'Select', code: 'KeyC' }, // clear table
-  { index: 9, label: 'Start', code: 'Escape' }, // close menu / deselect
-  { index: 14, label: 'DpadL', code: 'KeyQ' }, // cycle item backwards
-  { index: 15, label: 'DpadR', code: 'KeyE' }, // cycle item forwards
+const DEAD = 0.14;
+
+const DPAD: Array<[number, 'up' | 'down' | 'left' | 'right']> = [
+  [12, 'up'],
+  [14, 'down'],
+  [13, 'right'],
+  [15, 'left'],
 ];
 
-export function LabGamepad() {
+export function LabGamepad({ mode }: { mode: 'lab' | 'solar' }) {
   const prev = useRef<boolean[]>([]);
   const prevMove = useRef({ x: 0, y: 0 });
   const talkHeld = useRef(false);
@@ -26,11 +23,11 @@ export function LabGamepad() {
   const noticeTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    let frame: number;
+    let frame = 0;
 
     const tap = (code: string) => {
       dispatchKey(code, true);
-      setTimeout(() => dispatchKey(code, false), 70);
+      window.setTimeout(() => dispatchKey(code, false), 70);
     };
 
     const loop = () => {
@@ -53,42 +50,87 @@ export function LabGamepad() {
         }
 
         const axes = found.axes || [];
-        const leftX = Number(axes[0]) || 0;
-        const leftY = Number(axes[1]) || 0;
-        const rightX = Number(axes[2]) || 0;
-        const rightY = Number(axes[3]) || 0;
+        const lx = Number(axes[0]) || 0;
+        const ly = Number(axes[1]) || 0;
+        const rx = Number(axes[2]) || 0;
+        const ry = Number(axes[3]) || 0;
 
-        // Left stick = walk (applies to both the desktop camera and, when a
-        // headset session is presenting, the XR player via XRWalk).
-        const dead = 0.12;
-        const sx = Math.abs(leftX) > dead ? leftX : 0;
-        const sy = Math.abs(leftY) > dead ? leftY : 0;
+        // Left stick = walk (desktop camera + XR player via XRWalk).
+        const sx = Math.abs(lx) > DEAD ? lx : 0;
+        const sy = Math.abs(ly) > DEAD ? ly : 0;
         if (sx !== prevMove.current.x || sy !== prevMove.current.y) {
           prevMove.current = { x: sx, y: sy };
           applyMove(sx, sy);
         }
 
-        // Right stick = look around (delta per frame, consumed by WASDPlayerControls).
-        const lookSensitivity = 4.5;
-        if (Math.abs(rightX) > 0.08 || Math.abs(rightY) > 0.08) {
-          remoteControl.lookDx += rightX * lookSensitivity;
-          remoteControl.lookDy += rightY * lookSensitivity;
+        // Right stick = look. Consumed every frame by XRLook (VR), the desktop
+        // look controller or the solar academy; clamped so the accumulation
+        // cannot spin out of control.
+        const lookSens = 4.2;
+        if (Math.abs(rx) > 0.05) {
+          remoteControl.lookDx = Math.max(-60, Math.min(60, remoteControl.lookDx + rx * lookSens));
+        } else {
+          remoteControl.lookDx *= 0.6;
+        }
+        if (Math.abs(ry) > 0.05) {
+          remoteControl.lookDy = Math.max(-60, Math.min(60, remoteControl.lookDy + ry * lookSens));
+        } else {
+          remoteControl.lookDy *= 0.6;
         }
 
-        // Edge-triggered action buttons.
         const buttons = found.buttons || [];
-        for (const b of TAP_BUTTONS) {
-          const pressed = !!buttons[b.index]?.pressed;
-          if (pressed && !prev.current[b.index]) tap(b.code);
-          prev.current[b.index] = pressed;
+        const b = (i: number) => !!buttons[i]?.pressed;
+        const edge = (i: number) => b(i) && !prev.current[i];
+        const ui = gamepadUi();
+
+        // D-pad -> move the 3D wall-panel focus, or cycle table items on desktop.
+        for (const [idx, dir] of DPAD) {
+          if (edge(idx)) {
+            if (ui) ui.move(dir);
+            else if (dir === 'left') tap('KeyQ');
+            else if (dir === 'right') tap('KeyE');
+          }
+          prev.current[idx] = b(idx);
         }
 
-        // RT = hold to talk (Space push-to-talk).
-        const rt = !!buttons[7]?.pressed;
-        if (rt && !talkHeld.current) {
+        // A = confirm / select (panel focus, or planet in the academy).
+        if (edge(0)) {
+          if (ui) ui.activate();
+          else if (mode === 'solar') solarCmd.select += 1;
+        }
+        prev.current[0] = b(0);
+
+        // B = back (close rack / cancel) when the panel is focused, else Tools rack.
+        if (edge(1)) {
+          if (ui) ui.back();
+          else tap('Digit3');
+        }
+        prev.current[1] = b(1);
+
+        // X / Y = open Glassware / Chemicals racks.
+        if (edge(2)) tap('Digit1');
+        if (edge(3)) tap('Digit2');
+        prev.current[2] = b(2);
+        prev.current[3] = b(3);
+
+        // Start = heat, Select = clear table, Home = recenter view.
+        if (edge(9)) tap('KeyF');
+        if (edge(8)) tap('KeyC');
+        if (edge(16)) remoteControl.recenterPulse += 1;
+        prev.current[8] = b(8);
+        prev.current[9] = b(9);
+        prev.current[16] = b(16);
+
+        // LT = remove selected item.
+        if (edge(6)) tap('KeyX');
+        prev.current[6] = b(6);
+
+        // RT / RB / LB hold = push-to-talk (Space).
+        const talk = b(7) || b(5) || b(4);
+        if (talk && !talkHeld.current) {
           talkHeld.current = true;
           dispatchKey('Space', true);
-        } else if (!rt && talkHeld.current) {
+        } else if (!talk && talkHeld.current) {
           talkHeld.current = false;
           dispatchKey('Space', false);
         }
@@ -122,7 +164,7 @@ export function LabGamepad() {
       applyMove(0, 0);
       if (noticeTimer.current) window.clearTimeout(noticeTimer.current);
     };
-  }, []);
+  }, [mode]);
 
   return notice ? (
     <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[70] pointer-events-none">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Keyboard, Gamepad2, Smartphone, X, HelpCircle } from 'lucide-react';
-import { remoteControl } from '../remote/RemoteBridge';
+import { Keyboard, Gamepad2, X, HelpCircle } from 'lucide-react';
+import { remoteControl } from '../gamepad/gamepadInput';
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -30,31 +30,23 @@ const KEYBOARD_ROWS = [
   { keys: <><Kbd>X</Kbd> / <Kbd>Del</Kbd></>, label: 'Remove item' },
   { keys: <><Kbd>C</Kbd></>, label: 'Clear table' },
   { keys: <><Kbd>N</Kbd></>, label: 'Ask Nova' },
-  { keys: <><Kbd>V</Kbd></>, label: 'Split-screen VR on / off' },
   { keys: <><Kbd>Space</Kbd> (hold)</>, label: 'Talk to Nova' },
 ];
 
 const GAMEPAD_ROWS = [
   { keys: <><Kbd>L-Stick</Kbd></>, label: 'Walk around' },
   { keys: <><Kbd>R-Stick</Kbd></>, label: 'Look around' },
-  { keys: <><Kbd>A</Kbd><Kbd>B</Kbd><Kbd>X</Kbd></>, label: 'Glassware / Chemicals / Tools' },
-  { keys: <><Kbd>Y</Kbd></>, label: 'Ask Nova' },
-  { keys: <><Kbd>LB</Kbd></>, label: 'Heat (Bunsen burner)' },
-  { keys: <><Kbd>RB</Kbd></>, label: 'Pour / Mix reaction' },
-  { keys: <><Kbd>LT</Kbd></>, label: 'Remove item' },
-  { keys: <><Kbd>RT</Kbd> (hold)</>, label: 'Talk to Nova' },
+  { keys: <><Kbd>X</Kbd></>, label: 'Glassware rack' },
+  { keys: <><Kbd>Y</Kbd></>, label: 'Chemicals rack' },
+  { keys: <><Kbd>B</Kbd></>, label: 'Tools rack / Back' },
+  { keys: <><Kbd>A</Kbd></>, label: 'Confirm / select' },
+  { keys: <><Kbd>D-pad ↑↓</Kbd></>, label: 'Move panel focus' },
+  { keys: <><Kbd>D-pad ←→</Kbd></>, label: 'Cycle table item (desktop)' },
+  { keys: <><Kbd>Start</Kbd></>, label: 'Heat (Bunsen burner)' },
   { keys: <><Kbd>Select</Kbd></>, label: 'Clear table' },
-  { keys: <><Kbd>Start</Kbd></>, label: 'Back / close menu' },
-  { keys: <><Kbd>D-pad ←→</Kbd></>, label: 'Cycle table item' },
-];
-
-const PHONE_ROWS = [
-  { keys: <><Kbd>L-Stick</Kbd></>, label: 'Walk around' },
-  { keys: <><Kbd>R-Stick</Kbd></>, label: 'Look around' },
-  { keys: <><Kbd>GLASS</Kbd><Kbd>CHEMS</Kbd><Kbd>TOOLS</Kbd></>, label: 'Open racks' },
-  { keys: <><Kbd>POUR</Kbd><Kbd>HEAT</Kbd></>, label: 'Pour / Heat' },
-  { keys: <><Kbd>CLEAR</Kbd><Kbd>NOVA</Kbd></>, label: 'Clear / Ask Nova' },
-  { keys: <><Kbd>TALK</Kbd> (hold)</>, label: 'Talk to Nova' },
+  { keys: <><Kbd>Home</Kbd></>, label: 'Recenter view' },
+  { keys: <><Kbd>LT</Kbd></>, label: 'Remove item' },
+  { keys: <><Kbd>RT</Kbd><Kbd>RB</Kbd><Kbd>LB</Kbd> (hold)</>, label: 'Talk to Nova' },
 ];
 
 function Section({
@@ -131,7 +123,6 @@ export function LabControlsPanel() {
             <div className="space-y-4">
               <Section icon={Keyboard} title="Keyboard" rows={KEYBOARD_ROWS} accent="text-sky-400" />
               <Section icon={Gamepad2} title="Bluetooth gamepad" rows={GAMEPAD_ROWS} accent="text-emerald-400" />
-              <Section icon={Smartphone} title="Phone controller" rows={PHONE_ROWS} accent="text-indigo-400" />
 
               <div
                 className={`rounded-xl px-3 py-2 text-[11px] font-bold border flex items-center gap-2 ${

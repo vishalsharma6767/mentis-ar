@@ -136,7 +136,7 @@ export function LabDashboard({
                 <p className="text-[10px] text-slate-500">
                   {isSolar
                     ? 'Best with the phone in your VR headset — the camera shows your room. Hand tracking also works with the phone out of the headset.'
-                    : 'Works on desktop, on the phone in your headset, and with any Bluetooth game controller. Press CONTROLS (top-right, in-lab) for the full key list.'}
+                    : 'Works on desktop, and in VR with any Bluetooth game controller. Press CONTROLS (top-right, in-lab) for the full key list.'}
                 </p>
               </div>
             </div>

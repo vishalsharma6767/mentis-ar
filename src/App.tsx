@@ -10,15 +10,12 @@ import { TableWorkbenchUI } from './components/TableWorkbenchUI';
 import { LabGamepad } from './components/LabGamepad';
 import { LabControlsPanel } from './components/LabControlsPanel';
 import { XRWalk } from './components/XRWalk';
-import { RemoteBridge, onRemoteExit } from './remote/RemoteBridge';
+import { XRLook } from './components/XRLook';
 import { SolarSystem } from './solar/SolarSystem';
 import { AcademyHUD } from './solar/AcademyHUD';
 import { MRCamera } from './solar/MRCamera';
 import { solarState, solarCmd, resetPlanets } from './solar/solarState';
 import { parseSolarCommand } from './solar/solarCommands';
-import { StereoRig } from './headset/StereoRig';
-import { SplitVRToggle } from './headset/SplitVRToggle';
-import { headState, startHeadTracking, stopHeadTracking, recenter } from './headset/headRig';
 import { labAudio } from './audio/LabAudio';
 import { Experiment, EXPERIMENTS, InventoryItem, TableItem, totalVolume, mixColors, NovaModelInfo, NovaLanguage } from './types';
 import { useVoice } from './hooks/useVoice';
@@ -29,13 +26,6 @@ export default function App() {
 
   const [world, setWorld] = useState<'chemistry' | 'solar'>('chemistry');
   const [cameraEnabled, setCameraEnabled] = useState(false);
-  const [splitView, setSplitView] = useState(() => {
-    try {
-      return localStorage.getItem('mentis-split-vr') === '1';
-    } catch {
-      return false;
-    }
-  });
   const [labMode, setLabMode] = useState<'guided' | 'sandbox'>('guided');
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(EXPERIMENTS[0]);
 
@@ -222,15 +212,12 @@ export default function App() {
   }, [mode]);
 
   const startVR = () => {
-    // Phone-in-headset: go fullscreen + landscape as soon as the student taps
-    // Start (browsers require this to be inside the tap gesture).
-    if (isTouchDevice) enterPhoneFullscreen();
     setCountdown(5);
     setMode('countdown');
     if (world === 'solar') {
       speak('Welcome to the Mentis Solar System Academy. The camera will open and the planets will float in your room. Look at a planet to select it, pinch with your hand to grab it, or ask Nova to teach you.');
     } else {
-      speak('Entering chemistry lab room. Use WASD to walk, mouse to look around, and keys 1, 2, 3 for racks. A Bluetooth game controller or the phone remote also works — press CONTROLS on screen to see every button.');
+      speak('Entering chemistry lab room. Connect a Bluetooth game controller — left stick to walk, right stick to look around, and X, Y, B for the racks.');
     }
   };
 
@@ -240,114 +227,14 @@ export default function App() {
   };
 
   const backToLabs = () => {
-    stopHeadTracking();
-    headState.splitActive = false;
-    setSplitView(false);
-    try {
-      localStorage.setItem('mentis-split-vr', '0');
-    } catch {
-      // ignore
-    }
     setMode('menu');
   };
-
-  // ---- Phone-in-headset fullscreen flow ----
-  const isTouchDevice =
-    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-
-  const enterPhoneFullscreen = () => {
-    const el = document.documentElement as any;
-    const rfs = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (rfs) {
-      try {
-        const p = rfs.call(el);
-        p?.catch?.(() => {});
-      } catch {
-        // ignore
-      }
-    }
-    const so = (screen as any)?.orientation;
-    if (so?.lock) {
-      try {
-        so.lock('landscape').catch(() => {});
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  const exitPhoneFullscreen = () => {
-    const d = document as any;
-    const ex = d.exitFullscreen || d.webkitExitFullscreen;
-    if (ex) {
-      try {
-        ex.call(d);
-      } catch {
-        // ignore
-      }
-    }
-    const so = (screen as any)?.orientation;
-    if (so?.unlock) {
-      try {
-        so.unlock();
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  // Controller EXIT button -> take the lab phone out of fullscreen + split VR.
-  const handleControllerExit = useCallback(() => {
-    stopHeadTracking();
-    headState.splitActive = false;
-    setSplitView(false);
-    try {
-      localStorage.setItem('mentis-split-vr', '0');
-    } catch {
-      // ignore
-    }
-    exitPhoneFullscreen();
-  }, []);
-
-  useEffect(() => {
-    onRemoteExit(handleControllerExit);
-    return () => onRemoteExit(null);
-  }, [handleControllerExit]);
 
   const exitAcademy = () => {
     setCameraEnabled(false);
     resetPlanets();
     backToLabs();
   };
-
-  // Manual split-screen stereo for Cardboard-style headsets (no WebXR needed).
-  const toggleSplit = useCallback(async () => {
-    if (splitView) {
-      stopHeadTracking();
-      headState.splitActive = false;
-      setSplitView(false);
-      try {
-        localStorage.setItem('mentis-split-vr', '0');
-      } catch {
-        // ignore
-      }
-    } else {
-      const ok = await startHeadTracking();
-      headState.splitActive = true;
-      recenter();
-      setSplitView(true);
-      try {
-        localStorage.setItem('mentis-split-vr', '1');
-      } catch {
-        // ignore
-      }
-      speak(
-        ok
-          ? 'Split screen VR mode on. Hold the phone in the headset and look around. Press the recenter button to reset your view.'
-          : 'Split screen VR mode on, but head tracking was not allowed. Use the right stick to look around.'
-      );
-    }
-  }, [splitView, speak]);
 
   // Follow one-shot camera toggles from the HUD / voice commands.
   useEffect(() => {
@@ -428,10 +315,6 @@ export default function App() {
       else if (e.code === 'KeyN') {
         handleAskNovaAboutTable();
       }
-      // Key V: toggle split-screen stereo
-      else if (e.code === 'KeyV') {
-        toggleSplit();
-      }
       // Spacebar Push-To-Talk
       else if (e.code === 'Space' && !e.repeat && !isListening && isSupported) {
         startListening();
@@ -451,7 +334,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, isSupported, isListening, startListening, stopListening, tableItems, toggleSplit]);
+  }, [mode, isSupported, isListening, startListening, stopListening, tableItems]);
 
   // Solar Academy keyboard shortcuts: Space push-to-talk, C camera toggle,
   // R reset planets.
@@ -466,8 +349,6 @@ export default function App() {
         setCameraEnabled((prev) => !prev);
       } else if (e.code === 'KeyR') {
         resetPlanets();
-      } else if (e.code === 'KeyV') {
-        toggleSplit();
       }
     };
 
@@ -483,7 +364,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [mode, isSupported, isListening, startListening, stopListening, toggleSplit]);
+  }, [mode, isSupported, isListening, startListening, stopListening]);
 
   // Continuous heating simulation: temperature climbs, liquids boil/evaporate,
   // and KMnO₄ thermally decomposes releasing Oxygen gas.
@@ -872,51 +753,15 @@ export default function App() {
     }
   };
 
-  // Immersive headset mode (split-screen VR): hide all 2D lab chrome so the
-  // experiment fills the screen when the phone sits in the headset. Only inside
-  // the live 3D worlds — menu/dashboard/countdown must always stay visible.
-  const immersive = splitView && (mode === 'lab' || mode === 'solar');
-
-  // Scene rendered into each eye of the split-screen stereo view.
-  const renderWorld = (eye: 'left' | 'right') => (    <>
-      {world === 'solar' && mode === 'solar' ? (
-        <SolarSystem
-          onSelect={(id) => {
-            if (id) {
-              fetchNovaResponse(
-                `I just selected ${id}. Briefly say the name of this celestial body and one amazing fact about it.`
-              );
-            }
-          }}
-        />
-      ) : (
-        <>
-          <LabRoom
-            labMode={labMode}
-            selectedExperiment={selectedExperiment}
-            tableItems={tableItems}
-            selectedTableItemId={selectedTableItemId}
-            onSelectTableItem={setSelectedTableItemId}
-            onOpenRackMenu={(category) => setActiveRackCategory(category)}
-            isHeating={isHeating}
-            pourState={pourState}
-          />
-
-          <NovaAssistant message={novaMessage} />
-        </>
-      )}
-      <StereoRig eye={eye} clampMode={world === 'solar' ? 'solar' : 'lab'} />
-    </>
-  );
-
+  // Scene inside the single WebXR canvas. Immersive VR sessions render through
+  // the headset; the same scene works on a desktop monitor.
   return (
     <div className="w-full h-screen bg-gray-950 overflow-hidden font-sans select-none">
-      <RemoteBridge />
-      {mode === 'lab' && <LabGamepad />}
-      {mode === 'lab' && !immersive && <LabControlsPanel />}
+      {mode === 'lab' && <LabGamepad mode="lab" />}
+      {mode === 'solar' && <LabGamepad mode="solar" />}
+      {mode === 'lab' && <LabControlsPanel />}
       {cameraEnabled && world === 'solar' && mode === 'solar' && <MRCamera enabled={cameraEnabled} />}
-      {!immersive && (
-        <UIOverlay
+      <UIOverlay
         mode={mode}
         countdown={countdown}
         world={world}
@@ -936,10 +781,9 @@ export default function App() {
         onModelChange={handleModelChange}
         onAskNovaGuide={handleAskNovaGuide}
         onResetExperimentEquipment={handleResetExperimentEquipment}
-        />
-      )}
+      />
 
-      {mode === 'solar' && world === 'solar' && !immersive && (
+      {mode === 'solar' && world === 'solar' && (
         <AcademyHUD
           onExit={exitAcademy}
           isListening={isListening}
@@ -967,54 +811,13 @@ export default function App() {
           onToggleHeating={() => setIsHeating(!isHeating)}
           onAskNovaAboutTable={handleAskNovaAboutTable}
           reactionMessage={reactionMessage}
-          immersive={immersive}
           speak={speak}
         />
       )}
 
-      {(mode === 'lab' || mode === 'solar') && (
-        <SplitVRToggle on={splitView} onToggle={toggleSplit} onRecenter={recenter} />
-      )}
+      {(mode === 'lab' || mode === 'solar') && <VRButton />}
 
-      {(mode === 'lab' || mode === 'solar') && !splitView && <VRButton />}
-
-      {splitView && (mode === 'lab' || mode === 'solar') ? (
-        <div className="flex flex-row w-full h-full">
-          <div className="w-1/2 h-full">
-            <Canvas
-              dpr={[1, 1.25]}
-              shadows
-              gl={{ powerPreference: 'default', antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
-              camera={{ position: [0, 1.8, 3.8], fov: 65 }}
-              onCreated={({ gl }) => {
-                gl.domElement.addEventListener('webglcontextlost', (e) => {
-                  e.preventDefault();
-                  console.warn('WebGL context lost, preventing default crash...');
-                });
-              }}
-            >
-              <XR>{renderWorld('left')}</XR>
-            </Canvas>
-          </div>
-          <div className="w-1/2 h-full">
-            <Canvas
-              dpr={[1, 1.25]}
-              shadows
-              gl={{ powerPreference: 'default', antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
-              camera={{ position: [0, 1.8, 3.8], fov: 65 }}
-              onCreated={({ gl }) => {
-                gl.domElement.addEventListener('webglcontextlost', (e) => {
-                  e.preventDefault();
-                  console.warn('WebGL context lost, preventing default crash...');
-                });
-              }}
-            >
-              <XR>{renderWorld('right')}</XR>
-            </Canvas>
-          </div>
-        </div>
-      ) : (
-        <Canvas
+      <Canvas
           dpr={[1, 1.5]}
           shadows
           gl={{
@@ -1061,6 +864,7 @@ export default function App() {
 
             <Controllers />
             <Hands />
+            <XRLook />
 
             {mode === 'menu' || mode === 'dashboard' ? (
               <OrbitControls
@@ -1078,7 +882,6 @@ export default function App() {
             )}
           </XR>
         </Canvas>
-      )}
     </div>
   );
 }
